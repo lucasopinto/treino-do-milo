@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { DOG_H, DOG_STILL, DOG_TIMELINE, DOG_W, dogFrame, type Frame } from '../lib/pixelDog'
 
-const FRAME_MS = 130
+const FRAME_MS = 110
 let frames: Frame[] | null = null
 let still: Frame | null = null
 
@@ -23,10 +23,10 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, scale: number) {
 }
 
 /**
- * Fox terrier em pixel art abanando o rabinho, agachando ("vamos brincar?") e abanando de novo.
+ * O Milo em pixel art, de frente, abanando o rabinho como um personagem de jogo.
  * Desenhado num canvas, sem arquivos. Com "reduzir movimento" ligado no celular, fica parado.
  */
-export function PixelDog({ scale = 4, label = 'Fox terrier abanando o rabinho' }: { scale?: number; label?: string }) {
+export function PixelDog({ scale = 5, label = 'Milo abanando o rabinho' }: { scale?: number; label?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
