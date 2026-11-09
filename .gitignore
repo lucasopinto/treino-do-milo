@@ -9,3 +9,9 @@ __pycache__/
 .env
 *.db
 .pytest_cache/
+
+# API (Python)
+api/.venv/
+api/.env
+api/*.db
+__pycache__/
