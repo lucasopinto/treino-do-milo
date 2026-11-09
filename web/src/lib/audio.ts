@@ -19,8 +19,14 @@ function getCtx(): AudioContext | null {
       return null
     }
   }
-  if (ctx.state === 'suspended') void ctx.resume()
+  // 'suspended' antes do primeiro toque; 'interrupted' no iOS depois de ir para o fundo ou de uma ligação.
+  if (ctx.state !== 'running') ctx.resume().catch(() => {})
   return ctx
+}
+
+/** O som está liberado e tocando? */
+export function audioReady(): boolean {
+  return ctx?.state === 'running'
 }
 
 function getNoise(c: AudioContext): AudioBuffer {
@@ -33,8 +39,61 @@ function getNoise(c: AudioContext): AudioBuffer {
   return noise
 }
 
-/** Chamar num toque do usuário: navegadores só liberam áudio depois de uma interação. */
+let silentEl: HTMLAudioElement | null = null
+
+/**
+ * iOS antes do 17 (sem `navigator.audioSession`): a Web Audio fica muda com a chave de
+ * silêncio ligada. Tocar um <audio> (mesmo em silêncio) num toque muda a sessão de áudio
+ * da página para "mídia", e aí a Web Audio passa a tocar também.
+ */
+function playSilentMediaElement(): void {
+  if (typeof Audio === 'undefined') return
+  if (!silentEl) {
+    // WAV de 0,1 s de silêncio, gerado na hora (sem arquivo, funciona offline).
+    const rate = 8000
+    const samples = rate / 10
+    const buf = new ArrayBuffer(44 + samples)
+    const v = new DataView(buf)
+    const str = (o: number, t: string) => [...t].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)))
+    str(0, 'RIFF')
+    v.setUint32(4, 36 + samples, true)
+    str(8, 'WAVEfmt ')
+    v.setUint32(16, 16, true)
+    v.setUint16(20, 1, true) // PCM
+    v.setUint16(22, 1, true) // mono
+    v.setUint32(24, rate, true)
+    v.setUint32(28, rate, true)
+    v.setUint16(32, 1, true)
+    v.setUint16(34, 8, true) // 8 bits
+    str(36, 'data')
+    v.setUint32(40, samples, true)
+    for (let i = 0; i < samples; i++) v.setUint8(44 + i, 128) // 128 = silêncio em 8 bits
+    silentEl = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })))
+    silentEl.setAttribute('playsinline', '')
+    silentEl.preload = 'auto'
+  }
+  silentEl.play().catch(() => {})
+}
+
+/**
+ * Chamar num toque do usuário: navegadores só liberam áudio depois de uma interação.
+ * Atenção: no celular, `pointerdown` de toque NÃO conta como interação; contam
+ * `pointerup`, `touchend`, `click` e `keydown`.
+ */
 export function unlockAudio(): void {
+  // iOS 17+: tocar mesmo com a chave de silêncio ligada (o clicker precisa ser ouvido).
+  const nav = navigator as Navigator & { audioSession?: { type: string } }
+  if (nav.audioSession) {
+    if (nav.audioSession.type !== 'playback') {
+      try {
+        nav.audioSession.type = 'playback'
+      } catch {
+        /* navegador sem suporte */
+      }
+    }
+  } else {
+    playSilentMediaElement()
+  }
   const c = getCtx()
   if (!c) return
   // Toca um som vazio (necessário no iOS).
