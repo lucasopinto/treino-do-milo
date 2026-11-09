@@ -87,3 +87,8 @@
   --chart-axis: #a8a29e;
   --chart-surface: #1c1917;
 }
+
+/* Clicker: animação disparada direto no DOM para não atrasar o som. */
+.clicker-btn { transition: transform 60ms ease-out; }
+.clicker-btn:active { transform: scale(0.96); }
+.clicker-hit { animation: flash 400ms ease-out; }

@@ -5,6 +5,9 @@ import { TrainerProvider } from '../hooks/useTrainer'
 import { Placeholder } from '../features/Placeholder'
 import { PainelPage } from '../features/painel/PainelPage'
 import { XixiPage } from '../features/xixi/XixiPage'
+import { TreinoPage } from '../features/sessao/TreinoPage'
+import { SessionProvider } from '../features/sessao/SessionContext'
+import { ClickerPage } from '../features/clicker/ClickerPage'
 
 // HashRouter (#/rota) funciona no GitHub Pages e offline sem configuração de servidor.
 const router = createHashRouter([
@@ -12,9 +15,11 @@ const router = createHashRouter([
     element: <Layout />,
     children: [
       { index: true, element: <PainelPage /> },
-      { path: 'treino', element: <Placeholder title="Treino" /> },
+      { path: 'treino', element: <TreinoPage /> },
+      { path: 'clicker', element: <ClickerPage /> },
       { path: 'xixi', element: <XixiPage /> },
       { path: 'progresso', element: <Placeholder title="Progresso" /> },
+      { path: 'progresso/:skillId', element: <Placeholder title="Progresso" /> },
       { path: 'mais', element: <Placeholder title="Mais" /> },
       { path: '*', element: <Placeholder title="Página não encontrada" /> },
     ],
@@ -25,7 +30,9 @@ export function App() {
   return (
     <TrainerProvider>
       <ToastProvider>
-        <RouterProvider router={router} />
+        <SessionProvider>
+          <RouterProvider router={router} />
+        </SessionProvider>
       </ToastProvider>
     </TrainerProvider>
   )
