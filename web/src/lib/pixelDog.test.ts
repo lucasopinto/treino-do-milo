@@ -14,7 +14,7 @@ describe('fox terrier em pixel art', () => {
     }
   })
 
-  it('é tricolor: branco, sela preta e cabeça castanha', () => {
+  it('é tricolor como o Milo: branco, preto e castanho', () => {
     const c = colorsIn(dogFrame({ drop: 0, tail: 0 }))
     expect(c).toContain(DOG_COLORS.white)
     expect(c).toContain(DOG_COLORS.black)
