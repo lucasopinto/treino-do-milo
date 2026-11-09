@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .routers import health
+from .routers import health, households
 from .version import VERSION
 
 DESCRIPTION = """
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
         max_age=86400,
     )
     app.include_router(health.router)
+    app.include_router(households.router)
     return app
 
 
