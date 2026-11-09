@@ -112,6 +112,7 @@ async function syncRound() {
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
       saveConfig(null)
+      writeLocalJson('milo.pushEndpoint', null)
       setStatus({ phase: 'removed', error: 'Este celular foi removido da casa. Os dados continuam aqui.' })
     } else if (e instanceof NetworkError) {
       setStatus({ phase: 'offline', error: null })
@@ -250,6 +251,7 @@ export async function leaveHousehold(): Promise<void> {
 }
 
 export function forgetHousehold() {
+  writeLocalJson('milo.pushEndpoint', null)
   saveConfig(null)
   setStatus({ phase: 'off', error: null, lastSyncAt: null, lastPulled: 0 })
 }

@@ -6,6 +6,11 @@ O banco é criado pelas migrações do Alembic (assim elas também são testadas
 """
 
 import os
+
+# Antes de importar o app: ignora api/.env e variáveis MILO_ da máquina.
+os.environ["MILO_ENV_FILE"] = ""
+for _k in [k for k in os.environ if k.startswith("MILO_") and k not in ("MILO_ENV_FILE", "MILO_TEST_DATABASE_URL")]:
+    del os.environ[_k]
 from collections.abc import Iterator
 from pathlib import Path
 

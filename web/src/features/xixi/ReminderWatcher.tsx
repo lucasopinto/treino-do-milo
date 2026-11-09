@@ -12,6 +12,7 @@ import { vibrate } from '../../lib/haptics'
 import { showSystemNotification } from '../../lib/notify'
 import { readLocalJson, writeLocalJson } from '../../lib/storage'
 import { feedbackOk } from '../../lib/feedback'
+import { isPushOn } from '../../sync/push'
 
 const CHECK_MS = 15_000
 const SNOOZE_MS = 10 * 60_000
@@ -53,6 +54,11 @@ export function ReminderWatcher() {
     }
     function check() {
       const now = new Date()
+      // Com os avisos do servidor ligados, quem avisa é o servidor (senão chegaria duas vezes).
+      if (isPushOn()) {
+        lastCheck.current = now
+        return
+      }
       const fired = firedSet()
       for (const occ of dueOutings(settings.outingTimes, lastCheck.current, now)) {
         const key = `${dayKey(occ.at)}:${occ.outing.id}`

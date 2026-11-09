@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,7 +14,8 @@ DEFAULT_ORIGINS = [
 class Settings(BaseSettings):
     """Configuração lida de variáveis de ambiente (ou de um arquivo .env na pasta api/)."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="MILO_", extra="ignore")
+    # Os testes desligam o .env (MILO_ENV_FILE vazio) para não depender da configuração local.
+    model_config = SettingsConfigDict(env_file=os.environ.get("MILO_ENV_FILE", ".env") or None, env_prefix="MILO_", extra="ignore")
 
     # Local: SQLite. Produção: a URL do PostgreSQL (ex.: a do Neon).
     database_url: str = "sqlite:///./milo.db"
