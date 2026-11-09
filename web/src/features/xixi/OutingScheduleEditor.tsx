@@ -1,14 +1,16 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../../db/db'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
 import { Button, Sheet } from '../../components/ui'
 import { useToast } from '../../components/Toast'
-import { useSettings } from '../../hooks/useData'
+import { defaultSettings } from '../../db/repo'
 import { outingsFromMeals, sortOutings } from '../../domain/schedule'
 import { newId } from '../../lib/ids'
-import { timeZoneName, timeZoneOptions, useProfileSchedule } from '../../sync/schedule'
+import { profileSchedule, timeZoneName, timeZoneOptions, updateTrainer } from '../../sync/schedule'
 import { useTrainer } from '../../hooks/useTrainer'
 import { feedbackOk } from '../../lib/feedback'
-import type { OutingTime } from '../../domain/types'
+import type { OutingTime, Settings } from '../../domain/types'
 
 export function OutingScheduleEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { trainer } = useTrainer()
@@ -20,9 +22,16 @@ export function OutingScheduleEditor({ open, onClose }: { open: boolean; onClose
 }
 
 function EditorBody({ onClose }: { onClose: () => void }) {
-  const settings = useSettings()
+  // Espera as configurações salvas carregarem e passa para o formulário: senão ele começa com
+  // os valores padrão (fuso daqui, 22:30...) em vez da agenda e do fuso que a pessoa escolheu.
+  const saved = useLiveQuery(() => db.settings.get('settings').then((s) => s ?? null), [])
+  if (saved === undefined) return <p className="p-4 text-center text-stone-500">Carregando…</p>
+  return <EditorForm settings={saved ?? defaultSettings()} onClose={onClose} />
+}
+
+function EditorForm({ settings, onClose }: { settings: Settings; onClose: () => void }) {
   const { trainer } = useTrainer()
-  const schedule = useProfileSchedule(trainer.id)
+  const schedule = profileSchedule(settings, trainer.id)
   const toast = useToast()
   const [list, setList] = useState<OutingTime[]>(() => sortOutings(schedule.outingTimes))
   const [tz, setTz] = useState(schedule.timezone)
@@ -43,7 +52,7 @@ function EditorBody({ onClose }: { onClose: () => void }) {
 
   async function save() {
     const clean = list.filter((o) => o.time).map((o) => ({ ...o, label: o.label.trim() || 'Saída' }))
-    await schedule.update({ outingTimes: sortOutings(clean), timezone: tz })
+    await updateTrainer(trainer.id, { outingTimes: sortOutings(clean), timezone: tz })
     feedbackOk()
     toast('Agenda salva.')
     onClose()
