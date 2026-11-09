@@ -6,7 +6,9 @@ import { formatClock, formatDurationText } from '../../domain/dates'
 import { localTimeZone, nextOuting } from '../../domain/schedule'
 
 export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boolean }) {
-  const { trainer } = useTrainer()
+  const { trainer, trainers } = useTrainer()
+  // Perfil sem fuso escolhido (ex.: o celular do pai ainda não respondeu "de quem é"): usa o daqui.
+  const noTimezone = !trainer.timezone && trainers.length > 1
   const { outingTimes, timezone } = useProfileSchedule(trainer.id)
   const next = nextOuting(outingTimes, now, timezone)
   // Agenda noutro fuso (ex.: perfil do pai, em Portugal, visto do Brasil): mostra o horário de lá.
@@ -22,6 +24,11 @@ export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boo
           {next.tomorrow && <span className="font-normal"> (amanhã)</span>}
         </span>
       </span>
+      {noTimezone && (
+        <span className="mt-1 block rounded-lg bg-white/15 px-2 py-1 text-sm">
+          Fuso de {trainer.name} não escolhido: usando o horário daqui. Escolha em Xixi → Agenda → Editar.
+        </span>
+      )}
       {elsewhere && (
         <span className="block text-sm opacity-90">
           Agenda de {trainer.name} · hora de {timeZoneName(timezone)}

@@ -11,6 +11,9 @@ import { accidentFreeStreak, daySummary } from '../../domain/summary'
 import { checkedCount } from '../../domain/checklist'
 import { EliminationSheet } from '../xixi/EliminationSheet'
 import { NextOutingCard } from '../xixi/NextOutingCard'
+import { useTrainer } from '../../hooks/useTrainer'
+import { localTimeZone, wallTime } from '../../domain/schedule'
+import { timeZoneName, useProfileSchedule } from '../../sync/schedule'
 
 export function PainelPage() {
   const now = useNow(1000)
@@ -26,9 +29,15 @@ export function PainelPage() {
   const streak = accidentFreeStreak(elims, now)
   const [xixiOpen, setXixiOpen] = useState(false)
 
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
+  // O relógio mostra a hora de quem está no perfil (ex.: perfil do pai = hora de Portugal).
+  const { trainer } = useTrainer()
+  const { timezone } = useProfileSchedule(trainer.id)
+  const elsewhere = timezone !== localTimeZone()
+  const w = wallTime(now.getTime(), timezone)
+  const hh = String(w.h).padStart(2, '0')
+  const mm = String(w.min).padStart(2, '0')
   const ss = String(now.getSeconds()).padStart(2, '0')
+  const localHM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
   return (
     <div className="flex flex-col gap-4 pt-4">
@@ -45,7 +54,12 @@ export function PainelPage() {
           {hh}:{mm}
           <span className="text-3xl text-stone-500 dark:text-stone-400">:{ss}</span>
         </p>
-        <p className="mt-2 text-lg text-stone-700 dark:text-stone-300">{formatLongDate(now)}</p>
+        <p className="mt-2 text-lg text-stone-700 dark:text-stone-300">{formatLongDate(new Date(w.y, w.m - 1, w.d))}</p>
+        {elsewhere && (
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            Hora de {timeZoneName(timezone)} · aqui são {localHM}
+          </p>
+        )}
       </section>
 
       <NextOutingCard now={now} />
