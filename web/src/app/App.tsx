@@ -3,7 +3,7 @@ import { createHashRouter, RouterProvider } from 'react-router'
 import { Layout } from './Layout'
 import { ToastProvider } from '../components/Toast'
 import { TrainerProvider } from '../hooks/useTrainer'
-import { Placeholder } from '../features/Placeholder'
+import { NotFound } from '../features/NotFound'
 import { PainelPage } from '../features/painel/PainelPage'
 import { XixiPage } from '../features/xixi/XixiPage'
 import { TreinoPage } from '../features/sessao/TreinoPage'
@@ -45,7 +45,7 @@ const router = createHashRouter([
           </Suspense>
         ),
       },
-      { path: '*', element: <Placeholder title="Página não encontrada" /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ])

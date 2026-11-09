@@ -11,6 +11,11 @@ const version = process.env.npm_package_version ?? '0.0.0'
 export default defineConfig({
   base,
   define: { __APP_VERSION__: JSON.stringify(version) },
+  build: {
+    // Núcleo (React + roteador + Dexie) ~180 kB comprimido; gráficos vão num arquivo separado, carregado sob demanda.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: { output: { manualChunks: { graficos: ['recharts'] } } },
+  },
   // Pré-empacota o Recharts junto (é carregado sob demanda e senão gera uma 2ª cópia do React no modo dev).
   optimizeDeps: { include: ['recharts', 'react', 'react-dom', 'dexie', 'dexie-react-hooks'] },
   plugins: [
