@@ -101,7 +101,14 @@ describe('checklist', () => {
 })
 
 describe('mesclar backups', () => {
-  const rec = (id: string, updatedAt: number, deviceId = 'a') => ({ id, createdAt: 0, updatedAt, deletedAt: null, deviceId, v: updatedAt })
+  const rec = (id: string, updatedAt: number, deviceId = 'a') => ({
+    id,
+    createdAt: 0,
+    updatedAt,
+    deletedAt: null as number | null,
+    deviceId,
+    v: updatedAt,
+  })
 
   it('o mais recente vence; novos são adicionados', () => {
     const r = mergeRecords([rec('1', 10), rec('2', 50)], [rec('1', 20), rec('2', 40), rec('3', 1)])

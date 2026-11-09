@@ -9,6 +9,8 @@ const base = process.env.BASE_PATH ?? '/'
 
 export default defineConfig({
   base,
+  // Pré-empacota o Recharts junto (é carregado sob demanda e senão gera uma 2ª cópia do React no modo dev).
+  optimizeDeps: { include: ['recharts', 'react', 'react-dom', 'dexie', 'dexie-react-hooks'] },
   plugins: [
     react(),
     tailwindcss(),

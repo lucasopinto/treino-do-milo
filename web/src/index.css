@@ -71,3 +71,19 @@
     transition-duration: 1ms !important;
   }
 }
+
+/* Cores dos gráficos (paleta categórica validada para daltonismo; passos próprios no escuro). */
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --chart-grid: #e7e5e4;
+  --chart-axis: #57534e;
+  --chart-surface: #ffffff;
+}
+.dark {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --chart-grid: #292524;
+  --chart-axis: #a8a29e;
+  --chart-surface: #1c1917;
+}
