@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.models import PushSubscription, SentReminder
 from app.routers.push import run_tick
 from app.services import reminders, webpush
+from app.services.schedule_cache import cache
 from app.services.webpush import SendResult
 from app.tools.vapid import generate
 
@@ -209,3 +210,39 @@ def test_payload_e_json(push_on):
     # O service worker do app lê title/body/tag/url.
     [d] = reminders.due_outings(OUT, at(6, 45))
     assert set(json.loads(json.dumps(reminders.message({}, d)))) == {"title", "body", "tag", "url"}
+
+
+def test_tick_nao_le_o_banco_sem_motivo(client, db, push_on):
+    """Para o banco grátis poder dormir: ticks sem aviso não consultam o banco."""
+    lucas = create_household(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    save_settings(client, lucas["token"])
+    for minute in range(10, 40):
+        run_tick(db, at(7, minute).astimezone(UTC))
+    assert cache.loads == 1
+
+
+def test_mudar_a_agenda_vale_no_proximo_tick(client, db, push_on):
+    lucas = create_household(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    save_settings(client, lucas["token"])
+    run_tick(db, at(7, 0).astimezone(UTC))
+    novo = {
+        "collection": "settings",
+        "id": "settings",
+        "updatedAt": 9000,
+        "deviceId": "dev-lucas",
+        "data": {"id": "settings", "dogName": "Milo", "remindersEnabled": True, "outingTimes": [{"id": "n1", "time": "07:30", "label": "Nova"}]},
+    }
+    client.post("/sync/push", json={"records": [novo]}, headers=auth(lucas["token"]))
+    out = run_tick(db, at(7, 30).astimezone(UTC))
+    assert out.reminders == 1 and push_on["sent"][-1][1]["body"].startswith("Nova (07:30)")
+
+
+def test_servidor_reiniciado_nao_repete_aviso(client, db, push_on):
+    lucas = create_household(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    save_settings(client, lucas["token"])
+    assert run_tick(db, at(6, 46).astimezone(UTC)).reminders == 1
+    cache.reset()  # como se o processo tivesse reiniciado
+    assert run_tick(db, at(6, 47).astimezone(UTC)).reminders == 0

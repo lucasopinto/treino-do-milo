@@ -1,0 +1,57 @@
+name: API (testes)
+
+on:
+  push:
+    branches: [main]
+    paths: ['api/**', 'shared/**', '.github/workflows/api.yml']
+  pull_request:
+    paths: ['api/**', 'shared/**', '.github/workflows/api.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: milo
+          POSTGRES_PASSWORD: milo
+          POSTGRES_DB: milo_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U milo" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: api/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Testes no SQLite
+        run: pytest
+      - name: Testes no PostgreSQL
+        run: pytest
+        env:
+          MILO_TEST_DATABASE_URL: postgresql://milo:milo@localhost:5432/milo_test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Monta a imagem
+        run: docker build -t treino-do-milo-api api
+      - name: Sobe com SQLite e confere /health e /docs
+        run: |
+          docker run -d --name api -p 8000:8000 treino-do-milo-api
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 1; done
+          curl -fs localhost:8000/health/db
+          curl -fs -o /dev/null localhost:8000/docs
+          docker logs api

@@ -12,7 +12,7 @@ from ..models import Device, PushSubscription, SentReminder
 from ..schemas import PushSubscriptionIn, TickOut, VapidOut
 from ..security import current_device
 from ..services import reminders, webpush
-from ..services.sync import get_settings_record
+from ..services.schedule_cache import cache
 from ..util import new_id, now_ms
 
 router = APIRouter(tags=["avisos (push)"])
@@ -42,6 +42,7 @@ def subscribe(body: PushSubscriptionIn, device: Device = Depends(current_device)
     sub.p256dh = body.keys.p256dh
     sub.auth = body.keys.auth
     session.commit()
+    cache.invalidate()
     return Response(status_code=204)
 
 
@@ -49,6 +50,7 @@ def subscribe(body: PushSubscriptionIn, device: Device = Depends(current_device)
 def unsubscribe(device: Device = Depends(current_device), session: Session = Depends(get_session)) -> Response:
     session.execute(delete(PushSubscription).where(PushSubscription.device_id == device.id))
     session.commit()
+    cache.invalidate()
     return Response(status_code=204)
 
 
@@ -82,12 +84,17 @@ def run_tick(session: Session, now_utc: datetime) -> TickOut:
     out = TickOut(households=0, reminders=0, sent=0, removed=0)
     if not settings.push_enabled:
         return out
-    household_ids = session.scalars(select(PushSubscription.household_id).distinct()).all()
-    for hid in household_ids:
+    touched_db = not cache.loaded
+    cache.ensure(session)  # só lê o banco se algo mudou desde a última vez
+    for hid, house_settings in list(cache.households.items()):
         out.households += 1
-        house_settings = get_settings_record(session, hid)
         for due in reminders.reminders_for(house_settings, now_utc, settings.timezone):
-            # Marca antes de enviar: se dois ticks rodarem juntos, só um consegue gravar.
+            key = (hid, due.day, due.outing_id)
+            if key in cache.sent:
+                continue
+            cache.sent.add(key)
+            touched_db = True
+            # Marca no banco antes de enviar: depois de reiniciar o servidor, ou com dois ticks juntos, não repete.
             session.add(SentReminder(household_id=hid, day=due.day, outing_id=due.outing_id, sent_at=now_ms()))
             try:
                 session.commit()
@@ -103,9 +110,19 @@ def run_tick(session: Session, now_utc: datetime) -> TickOut:
                 if r.gone:
                     session.delete(sub)
                     out.removed += 1
+                    cache.invalidate()
             session.commit()
-    # Limpeza: marcas com mais de 3 dias não servem mais.
-    cutoff = now_ms() - 3 * 86_400_000
-    session.execute(delete(SentReminder).where(SentReminder.sent_at < cutoff))
-    session.commit()
+    if touched_db:
+        # Limpeza: marcas com mais de 3 dias não servem mais.
+        cutoff = now_ms() - 3 * 86_400_000
+        session.execute(delete(SentReminder).where(SentReminder.sent_at < cutoff))
+        session.commit()
+        today = now_utc.strftime("%Y-%m-%d")
+        cache.sent = {k for k in cache.sent if k[1] >= _yesterday(today)}
     return out
+
+
+def _yesterday(day: str) -> str:
+    from datetime import date, timedelta
+
+    return (date.fromisoformat(day) - timedelta(days=1)).isoformat()

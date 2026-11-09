@@ -2,7 +2,10 @@
 
 App de celular para treinar o Milo (fox terrier de pelo curto, 6 anos) com **reforço positivo**: sessões curtas, palavra marcadora "isso!", clicker, controle de xixi e cocô, progresso por comando e truque, atividade física e a regra "nada é de graça".
 
-É um **PWA**: abre no navegador, pode ser instalado na tela de início e **funciona sem internet**. Os dados ficam guardados no próprio celular.
+É um **PWA**: abre no navegador, pode ser instalado na tela de início e **funciona sem internet**. Os dados ficam guardados no próprio celular e, com a **casa compartilhada** (Fase 2), são sincronizados entre os celulares por uma API própria, que também manda os lembretes de saída com o app fechado.
+
+- **App:** https://lucasopinto.github.io/treino-do-milo/
+- **API:** veja [`api/README.md`](api/README.md) (endpoints, testes e como publicar no Render + Neon + cron-job.org)
 
 ---
 
@@ -18,6 +21,7 @@ App de celular para treinar o Milo (fox terrier de pelo curto, 6 anos) com **ref
 | **Atividade** | Cronômetro de passeio e brincadeira, registro manual, anel da meta diária |
 | **Nada é de graça** | Checklist diário com histórico de 4 semanas |
 | **Histórico / Estatísticas** | Linha do tempo com filtros; gráficos semanais e mensais; Lucas × Pai |
+| **Casa compartilhada** | Criar casa ou entrar com código de convite, lista de celulares, sincronização automática, avisos de saída com o app fechado (Web Push) |
 | **Configurações** | Nome e foto, treinadores, refeições e saídas, meta, sons, tema, backup/importação em JSON, dados de exemplo |
 
 ---
@@ -91,24 +95,31 @@ Se der outro nome ao repositório, o endereço muda junto (o workflow ajusta soz
 3. Abra **pelo ícone** (não pelo Safari). Só assim as notificações funcionam (iOS 16.4 ou mais novo).
 4. Na tela Xixi, toque em **Ativar avisos de saída**.
 
-### Passar os dados para o outro celular
+### Usar os mesmos dados nos dois celulares
 
-Até a Fase 2 (sincronização), os celulares não conversam entre si. Para juntar os dados:
+Precisa da API publicada (passo a passo em [`api/README.md`](api/README.md#publicar-grátis-render--neon--cron-joborg)).
 
-1. No celular A: **Mais → Configurações → Backup → Enviar backup** (manda o arquivo pelo WhatsApp, e-mail etc.).
-2. No celular B: salve o arquivo, vá em **Importar** e escolha **Juntar com os dados deste celular**.
+1. No celular A: **Mais → Casa compartilhada → Criar casa**. Aparece um código de 6 letras, que vale uma vez por 24 h.
+2. No celular B: **Mais → Casa compartilhada → Entrar com um código**.
+3. Nos dois: **Ligar avisos neste celular** e depois **Testar**.
 
-Ao juntar, nada se perde: registros novos entram, e se o mesmo registro foi editado nos dois, vale a edição mais recente.
+Os registros que já estavam em cada celular são juntados, sem perder nada. Depois disso:
+- o app sincroniza sozinho: ao abrir, ao voltar para ele, depois de cada registro e a cada minuto com o app aberto;
+- sem internet, tudo fica guardado e é enviado depois;
+- se o mesmo registro for editado nos dois celulares, vale a edição mais recente.
+
+Sem a API, dá para juntar os dados por backup: em **Mais → Configurações → Backup → Enviar backup** no celular A, e **Importar → Juntar** no celular B.
 
 ---
 
 ## Limitações conhecidas (Fase 1)
 
 **Lembretes e notificações**
-- **Com o app fechado, os lembretes não chegam.** Sem servidor, quem dispara o lembrete é o próprio app, que precisa estar aberto ou ter sido minimizado há pouco. Lembrete garantido com o app fechado depende do Web Push da Fase 2.
-- **Android:** com o app minimizado, o Chrome reduz os timers (cerca de 1 vez por minuto, e menos depois de alguns minutos), então o aviso pode atrasar. Com a tela bloqueada por muito tempo, pode não chegar.
-- **iPhone:** o iOS praticamente congela o app assim que ele sai da tela. Na prática, na Fase 1 o lembrete só funciona com o app aberto. As notificações exigem o app **instalado na tela de início** (iOS 16.4+).
+- **Com a casa compartilhada e os avisos ligados**, o servidor manda o lembrete com o app fechado. Ele pode chegar com até ~1 min de atraso, que é o intervalo do cron. Se o celular ficar mais de 15 min sem sinal, aquele aviso é descartado.
+- **Sem os avisos do servidor**, quem avisa é o próprio app, que precisa estar aberto ou ter sido minimizado há pouco. No Android o aviso pode atrasar com o app minimizado. No iPhone, na prática só funciona com o app aberto.
+- **iPhone:** as notificações exigem o app **instalado na tela de início**, a partir do iOS 16.4.
 - Se a notificação do sistema for negada, o app ainda avisa com **alerta na tela + som + vibração** quando estiver aberto.
+- Quando os avisos do servidor estão ligados, o aviso interno do app fica desligado naquele celular, para não avisar duas vezes. Se o servidor cair, aquele celular fica sem lembrete até ele voltar.
 
 **Som, vibração e tela acesa**
 - **Vibração não existe no iPhone** (o Safari não oferece). Lá o retorno é por som e animação.
@@ -116,13 +127,21 @@ Ao juntar, nada se perde: registros novos entram, e se o mesmo registro foi edit
 - O som só é liberado depois do **primeiro toque** na tela (regra dos navegadores).
 - **Tela acesa (Wake Lock):** funciona no Chrome do Android e no Safari a partir do iOS 16.4; no app instalado no iPhone, de forma confiável a partir do iOS 18.4. Se não houver suporte, a tela pode apagar durante a sessão (a sessão continua contando certo, porque o timer usa o relógio).
 
-**Dados**
-- Os dados ficam **só no celular**. Se o app for desinstalado, os dados do navegador forem limpos ou (no iPhone) o app ficar semanas sem uso, o sistema pode apagar tudo. **Faça backup de vez em quando.**
-- Sem sincronização automática entre os celulares até a Fase 2: use o backup/importar.
-- O cronômetro de atividade e a sessão em andamento ficam guardados no próprio aparelho: se você trocar de celular no meio, eles não vão junto.
+**Dados e sincronização**
+- **Sem casa compartilhada**, os dados ficam **só no celular**. Se o app for desinstalado, os dados do navegador forem limpos ou (no iPhone) o app ficar semanas sem uso, o sistema pode apagar tudo. Faça backup de vez em quando. Com a casa, uma cópia fica no servidor.
+- **Conflito é por registro inteiro:** vale a última edição. Se você e seu pai marcarem itens **diferentes** do checklist do mesmo dia **sem internet**, ao sincronizar fica só a marcação mais recente. Com internet isso não acontece, porque cada marcação é enviada em segundos.
+- As configurações (nome, foto, agenda, sons, meta) são **da casa**: mudar num celular muda no outro.
+- O app confia no relógio do celular para decidir a edição mais recente. Um relógio adiantado mais de 5 min é corrigido pelo servidor; um relógio atrasado pode fazer uma edição perder para uma mais antiga.
+- O cronômetro de atividade e a sessão em andamento ficam no próprio aparelho: se você trocar de celular no meio, eles não vão junto.
+- **Planos grátis:**
+  - O Render suspende a API se a conta passar de 750 h no mês. Com 1 serviço, isso não acontece.
+  - O Neon suspende o banco se passar de 100 h de computação. A API foi feita para o banco dormir quando ninguém está usando.
+  - Os limites dos planos podem mudar. Se a API ficar fora do ar, o app continua funcionando no celular e sincroniza quando ela voltar.
+- O limite de tentativas de código de convite fica em memória: reinicia quando a API reinicia.
 
 **Outros**
 - No Windows com o *Controle de Aplicativos Inteligente* ligado, alguns binários do Vite 8 são bloqueados. Por isso o projeto usa Vite 7 e o Rollup em WebAssembly (`overrides` no `package.json`). Não afeta o app nem o deploy.
+- Pelo mesmo motivo, no Windows a API usa o SQLAlchemy em Python puro e o SQLite (veja [`api/README.md`](api/README.md)). No servidor, que roda Linux, nada disso se aplica.
 - `npm audit` aponta avisos em dependências de **build** do gerador do service worker (workbox-build). Elas não vão para o app publicado.
 
 ---
@@ -131,7 +150,15 @@ Ao juntar, nada se perde: registros novos entram, e se o mesmo registro foi edit
 
 ```
 treino-do-milo/
-├─ .github/workflows/deploy.yml   # testa, gera build e publica no GitHub Pages
+├─ .github/workflows/
+│  ├─ deploy.yml                  # testa, gera build e publica o app no GitHub Pages
+│  └─ api.yml                     # testa a API (SQLite e PostgreSQL) e monta a imagem Docker
+├─ render.yaml                    # blueprint do Render para a API
+├─ shared/merge-cases.json        # casos da regra "o mais recente vence", testados no app e na API
+├─ api/                           # Fase 2: FastAPI + SQLAlchemy + Alembic (veja api/README.md)
+│  ├─ app/                        # rotas, modelos, sincronização, Web Push, agenda dos lembretes
+│  ├─ alembic/                    # migrações do banco
+│  └─ tests/                      # pytest
 └─ web/
    ├─ public/                     # ícones, sw-extra.js (cliques em notificação; push na Fase 2)
    └─ src/
@@ -143,6 +170,7 @@ treino-do-milo/
       ├─ features/                # uma pasta por tela
       ├─ hooks/                   # dados ao vivo, relógio, quem treina, tela acesa
       ├─ lib/                     # som, vibração, notificações, tema, imagem
+      ├─ sync/                    # Fase 2: cliente da API, motor de sincronização, Web Push
       └─ seed/demo.ts             # dados de exemplo
 ```
 
@@ -151,9 +179,13 @@ treino-do-milo/
 - O timer da sessão é uma máquina de estados pura baseada no **horário de término**, não em somar segundos: não atrasa se o celular desacelerar o app.
 - O clicker dispara no `pointerdown` (o `click` chega 50 a 300 ms atrasado no celular), com um único `AudioContext` preparado no primeiro toque.
 - Endereços com `#/` (HashRouter) para funcionar no GitHub Pages e offline sem configurar servidor.
+- **Sincronização offline-first:** o app grava sempre no celular. Na sincronização, envia os registros que este aparelho editou depois do último envio e recebe tudo que o servidor gravou depois do último `seq`. Uma edição sempre ganha `updatedAt` maior que a versão que ela editou, mesmo com o relógio atrasado.
 
 ---
 
-## Próximo passo: Fase 2
+## Testes de tudo
 
-API em FastAPI + PostgreSQL, "casa" compartilhada com código de convite, sincronização offline-first por timestamp e Web Push (VAPID) para os lembretes chegarem com o app fechado.
+```bash
+cd web && npm test                         # app: regras de negócio e sincronização com dois "celulares"
+cd api && .venv/Scripts/python -m pytest   # API: casa, sincronização, lembretes, Web Push
+```

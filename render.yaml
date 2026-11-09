@@ -1,0 +1,27 @@
+# Blueprint do Render: cria a API a partir deste repositório (Dashboard → New → Blueprint).
+# O banco fica no Neon (grátis e não expira); cole a URL dele em MILO_DATABASE_URL.
+services:
+  - type: web
+    name: treino-do-milo-api
+    runtime: docker
+    plan: free
+    # Escolha no Neon a mesma região (AWS us-east-1) para as consultas serem rápidas.
+    region: virginia
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - api/**
+    envVars:
+      - key: MILO_DATABASE_URL
+        sync: false
+      - key: MILO_VAPID_PUBLIC_KEY
+        sync: false
+      - key: MILO_VAPID_PRIVATE_KEY
+        sync: false
+      - key: MILO_VAPID_SUBJECT
+        sync: false
+      - key: MILO_CRON_SECRET
+        generateValue: true

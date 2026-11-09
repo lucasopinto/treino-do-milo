@@ -3,7 +3,7 @@ name: Publicar no GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['web/**', '.github/workflows/deploy.yml']
+    paths: ['web/**', 'shared/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 permissions:
@@ -34,6 +34,8 @@ jobs:
         env:
           # O site fica em https://<usuario>.github.io/<nome-do-repositorio>/
           BASE_PATH: /${{ github.event.repository.name }}/
+          # Endereço da API (Fase 2): Settings → Secrets and variables → Actions → Variables → API_URL
+          VITE_API_URL: ${{ vars.API_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

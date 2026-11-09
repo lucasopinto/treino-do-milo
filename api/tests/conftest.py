@@ -59,6 +59,9 @@ def db(engine: Engine) -> Iterator[Session]:
     with engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
             conn.execute(table.delete())
+    from app.services.schedule_cache import cache
+
+    cache.reset()
     maker = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     with maker() as session:
         yield session

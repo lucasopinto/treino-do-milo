@@ -8,6 +8,7 @@ from ..db import get_session
 from ..models import Device, Household, Invite, PushSubscription
 from ..schemas import AuthOut, CreateHousehold, DeviceOut, HouseholdOut, InviteOut, JoinHousehold, RenameDevice
 from ..security import client_ip, current_device, hash_token, join_limiter, new_invite_code, new_token, normalize_code
+from ..services.schedule_cache import cache
 from ..util import new_id, now_ms
 
 router = APIRouter(tags=["casa"])
@@ -141,4 +142,5 @@ def remove_device(device_id: str, device: Device = Depends(current_device), sess
         if household is not None:
             session.delete(household)
     session.commit()
+    cache.invalidate()
     return Response(status_code=204)

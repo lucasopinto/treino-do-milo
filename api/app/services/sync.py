@@ -92,6 +92,11 @@ def apply_push(session: Session, household_id: str, records: list[SyncRecord], n
             corrections.pop(key, None)
 
     session.commit()
+    if any(r.collection == "settings" for r in records):
+        # A agenda de saídas pode ter mudado.
+        from .schedule_cache import cache
+
+        cache.invalidate()
     return PushResult(accepted=accepted, corrections=list(corrections.values()), seq=household.seq)
 
 

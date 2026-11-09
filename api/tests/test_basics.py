@@ -13,6 +13,10 @@ def test_health(client):
     assert "version" in body
 
 
+def test_health_db(client):
+    assert client.get("/health/db").json() == {"status": "ok", "db": "ok"}
+
+
 def test_docs_disponiveis(client):
     assert client.get("/docs").status_code == 200
     spec = client.get("/openapi.json").json()
