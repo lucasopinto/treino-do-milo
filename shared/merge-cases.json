@@ -1,0 +1,11 @@
+{
+  "_sobre": "Casos da regra 'o mais recente vence'. Usados pelos testes do app (Vitest) e da API (pytest), para garantir que os dois lados decidem igual.",
+  "cases": [
+    { "name": "mais recente vence", "current": { "updatedAt": 1000, "deviceId": "a" }, "incoming": { "updatedAt": 2000, "deviceId": "a" }, "winner": "incoming" },
+    { "name": "mais antigo perde", "current": { "updatedAt": 2000, "deviceId": "a" }, "incoming": { "updatedAt": 1000, "deviceId": "z" }, "winner": "current" },
+    { "name": "empate: maior deviceId vence (chegando)", "current": { "updatedAt": 1000, "deviceId": "a" }, "incoming": { "updatedAt": 1000, "deviceId": "b" }, "winner": "incoming" },
+    { "name": "empate: maior deviceId vence (atual)", "current": { "updatedAt": 1000, "deviceId": "b" }, "incoming": { "updatedAt": 1000, "deviceId": "a" }, "winner": "current" },
+    { "name": "idêntico: mantém o atual", "current": { "updatedAt": 1000, "deviceId": "a" }, "incoming": { "updatedAt": 1000, "deviceId": "a" }, "winner": "current" },
+    { "name": "registro padrão (0) perde para qualquer edição", "current": { "updatedAt": 0, "deviceId": "z" }, "incoming": { "updatedAt": 1, "deviceId": "a" }, "winner": "incoming" }
+  ]
+}
