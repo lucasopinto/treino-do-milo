@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { createHashRouter, RouterProvider } from 'react-router'
 import { Layout } from './Layout'
 import { ToastProvider } from '../components/Toast'
@@ -13,6 +14,12 @@ import { SkillDetailPage } from '../features/progresso/SkillDetailPage'
 import { MaisPage } from '../features/mais/MaisPage'
 import { AtividadePage } from '../features/atividade/AtividadePage'
 import { ChecklistPage } from '../features/checklist/ChecklistPage'
+import { HistoricoPage } from '../features/historico/HistoricoPage'
+import { ConfiguracoesPage } from '../features/configuracoes/ConfiguracoesPage'
+
+// Gráficos carregados só quando a tela é aberta.
+const EstatisticasPage = lazy(() => import('../features/estatisticas/EstatisticasPage'))
+const loading = <p className="p-6 text-center text-stone-500">Carregando…</p>
 
 // HashRouter (#/rota) funciona no GitHub Pages e offline sem configuração de servidor.
 const router = createHashRouter([
@@ -28,6 +35,16 @@ const router = createHashRouter([
       { path: 'mais', element: <MaisPage /> },
       { path: 'atividade', element: <AtividadePage /> },
       { path: 'checklist', element: <ChecklistPage /> },
+      { path: 'historico', element: <HistoricoPage /> },
+      { path: 'configuracoes', element: <ConfiguracoesPage /> },
+      {
+        path: 'estatisticas',
+        element: (
+          <Suspense fallback={loading}>
+            <EstatisticasPage />
+          </Suspense>
+        ),
+      },
       { path: '*', element: <Placeholder title="Página não encontrada" /> },
     ],
   },

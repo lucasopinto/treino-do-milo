@@ -6,9 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 // No GitHub Pages o app fica em https://<usuario>.github.io/treino-do-milo/
 // O workflow de deploy define BASE_PATH=/treino-do-milo/
 const base = process.env.BASE_PATH ?? '/'
+const version = process.env.npm_package_version ?? '0.0.0'
 
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(version) },
   // Pré-empacota o Recharts junto (é carregado sob demanda e senão gera uma 2ª cópia do React no modo dev).
   optimizeDeps: { include: ['recharts', 'react', 'react-dom', 'dexie', 'dexie-react-hooks'] },
   plugins: [
