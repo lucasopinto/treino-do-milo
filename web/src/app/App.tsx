@@ -10,6 +10,9 @@ import { SessionProvider } from '../features/sessao/SessionContext'
 import { ClickerPage } from '../features/clicker/ClickerPage'
 import { ProgressoPage } from '../features/progresso/ProgressoPage'
 import { SkillDetailPage } from '../features/progresso/SkillDetailPage'
+import { MaisPage } from '../features/mais/MaisPage'
+import { AtividadePage } from '../features/atividade/AtividadePage'
+import { ChecklistPage } from '../features/checklist/ChecklistPage'
 
 // HashRouter (#/rota) funciona no GitHub Pages e offline sem configuração de servidor.
 const router = createHashRouter([
@@ -22,7 +25,9 @@ const router = createHashRouter([
       { path: 'xixi', element: <XixiPage /> },
       { path: 'progresso', element: <ProgressoPage /> },
       { path: 'progresso/:skillId', element: <SkillDetailPage /> },
-      { path: 'mais', element: <Placeholder title="Mais" /> },
+      { path: 'mais', element: <MaisPage /> },
+      { path: 'atividade', element: <AtividadePage /> },
+      { path: 'checklist', element: <ChecklistPage /> },
       { path: '*', element: <Placeholder title="Página não encontrada" /> },
     ],
   },
