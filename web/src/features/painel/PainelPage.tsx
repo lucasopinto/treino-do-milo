@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { ChevronRight, Droplet, Footprints, MousePointerClick, Play, type LucideIcon } from 'lucide-react'
 import { Card, ProgressRing } from '../../components/ui'
 import { DogAvatar } from '../../components/DogAvatar'
+import { PixelDog } from '../../components/PixelDog'
 import { TrainerSelector } from '../../components/TrainerSelector'
 import { useActivities, useChecklistDays, useEliminations, useSessions, useSettings } from '../../hooks/useData'
 import { useNow } from '../../hooks/useNow'
@@ -61,6 +62,13 @@ export function PainelPage() {
           </p>
         )}
       </section>
+
+      <div className="flex justify-center">
+        {/* Fundo claro e grama: o contorno preto do desenho some no tema escuro. */}
+        <div className="rounded-2xl border-b-4 border-green-600 bg-sky-100 px-6 pt-1 dark:bg-stone-600">
+          <PixelDog label={`${settings.dogName} abanando o rabinho`} />
+        </div>
+      </div>
 
       <NextOutingCard now={now} />
 
