@@ -27,6 +27,7 @@ export const DOG_COLORS = {
   crease: '#5a4f49',
   shadow: 'rgba(0,0,0,0.28)',
   motion: '#a8a29e',
+  bark: '#fbbf24',
 } as const
 
 export type Pixel = string | null
@@ -43,6 +44,10 @@ export interface Pose {
   blink?: boolean
   /** Orelha esquerda mexendo. */
   ear?: boolean
+  /** "Posição de brincar": quanto a frente (cabeça e peito) abaixa, de 0 a 3. A traseira fica em cima. */
+  bow?: number
+  /** Latindo: boca aberta e risquinhos de som. */
+  bark?: boolean
 }
 
 const C = DOG_COLORS
@@ -52,9 +57,12 @@ const LEGS_FROM = 24
 export function dogFrame(p: Pose): Frame {
   const g: Frame = Array.from({ length: DOG_H }, () => Array<Pixel>(DOG_W).fill(null))
   const dy = p.bob ? 1 : 0
-  /** Pinta um pixel; acima das patas, acompanha a respiração. */
+  const bow = Math.max(0, Math.min(3, p.bow ?? 0))
+  /** Deslocamento da parte sendo desenhada: a traseira só respira; a frente também abaixa. */
+  let off = dy
+  /** Pinta um pixel; acima das patas, acompanha a respiração (e o agachar, na frente). */
   const px = (x: number, y: number, c: string) => {
-    const yy = y >= LEGS_FROM ? y : y + dy
+    const yy = y >= LEGS_FROM ? y : y + off
     if (x >= 0 && x < DOG_W && yy >= 0 && yy < DOG_H) g[yy]![x] = c
   }
   const rect = (x0: number, y0: number, x1: number, y1: number, c: string) => {
@@ -86,6 +94,9 @@ export function dogFrame(p: Pose): Frame {
   px(26, 27, C.whiteDeep)
   rect(23, 29, 27, 29, C.whiteShade)
 
+  // ---------- Daqui em diante, a frente: abaixa quando ele agacha para brincar ----------
+  off = dy + bow
+
   // ---------- Peito e pescoço ----------
   rect(10, 13, 21, 23, C.white)
   rect(9, 15, 9, 22, C.white)
@@ -94,11 +105,21 @@ export function dogFrame(p: Pose): Frame {
   px(9, 22, C.whiteShade)
   rect(14, 21, 16, 21, C.whiteShade) // pelo do peito
 
-  // ---------- Patas da frente ----------
-  rect(11, 24, 13, 28, C.white)
-  rect(13, 24, 13, 28, C.whiteShade)
-  rect(17, 24, 19, 28, C.white)
-  rect(19, 24, 19, 28, C.whiteDeep)
+  // ---------- Patas da frente (agachado, ficam curtinhas e abertas) ----------
+  const legTop = LEGS_FROM + bow + dy
+  rect(11, legTop, 13, 28, C.white)
+  rect(13, legTop, 13, 28, C.whiteShade)
+  rect(17, legTop, 19, 28, C.white)
+  rect(19, legTop, 19, 28, C.whiteDeep)
+  if (bow >= 2) {
+    // Antebraços no chão, cotovelos para fora.
+    rect(9, 28, 14, 28, C.white)
+    rect(16, 28, 21, 28, C.white)
+    rect(9, 29, 14, 29, C.white)
+    rect(16, 29, 21, 29, C.white)
+    px(9, 28, C.whiteShade)
+    px(21, 28, C.whiteDeep)
+  }
   rect(10, 29, 14, 29, C.white)
   rect(16, 29, 20, 29, C.white)
   px(12, 29, C.whiteShade) // dedinhos
@@ -194,7 +215,14 @@ export function dogFrame(p: Pose): Frame {
   rect(13, 13, 18, 13, C.white) // queixo
   rect(17, 13, 18, 13, C.whiteShade)
 
-  if (p.tongue) {
+  if (p.bark) {
+    // Boca bem aberta: "Au!"
+    rect(14, 13, 17, 13, C.eye)
+    rect(13, 14, 18, 14, C.white)
+    rect(15, 14, 16, 14, C.tongue)
+    rect(14, 15, 17, 15, C.white)
+    rect(16, 15, 17, 15, C.whiteShade)
+  } else if (p.tongue) {
     rect(15, 13, 16, 14, C.tongue)
     px(16, 14, C.tongueShade)
     px(15, 15, C.tongue)
@@ -222,6 +250,27 @@ export function dogFrame(p: Pose): Frame {
     for (const y of [8, 10]) if (!out[y + dy]?.[mx]) out[y + dy]![mx] = C.motion
   }
 
+  // Risquinhos de latido saindo dos dois lados da boca.
+  if (p.bark) {
+    const o = dy + bow
+    for (const [x, y] of [
+      [6, 9],
+      [7, 10],
+      [4, 12],
+      [6, 12],
+      [5, 12],
+      [6, 15],
+      [7, 14],
+      [25, 9],
+      [24, 10],
+      [26, 12],
+      [27, 12],
+    ] as const) {
+      const yy = y + o
+      if (yy >= 0 && yy < DOG_H && !out[yy]![x]) out[yy]![x] = C.bark
+    }
+  }
+
   // Sombra no chão (por baixo de tudo).
   for (let x = 8; x <= 29; x++) {
     const edge = x <= 9 || x >= 28
@@ -230,17 +279,23 @@ export function dogFrame(p: Pose): Frame {
   return out
 }
 
-/**
- * Animação "parado" de personagem de RPG, em ciclo: rabinho abanando rápido, respiração lenta,
- * língua de fora acompanhando a respiração, piscadas e a orelha mexendo de vez em quando.
- */
-export const DOG_TIMELINE: Pose[] = Array.from({ length: 48 }, (_, i) => ({
-  tail: ([-1, 0, 1, 0] as const)[i % 4]!,
-  bob: Math.floor(i / 6) % 2 === 1,
-  tongue: i < 36,
-  blink: i === 20 || i === 21 || i === 44,
-  ear: i >= 30 && i <= 32,
-}))
-
+/** Quadros de 100 ms: abana em pé, agacha na posição de brincar, late duas vezes ("au au"),
+ * abana agachado com a língua de fora, late de novo e levanta. */
+export const DOG_TIMELINE: Pose[] = (() => {
+  const wag = (i: number) => ([-1, 0, 1, 0] as const)[i % 4]!
+  const frames: Pose[] = []
+  // Em pé, abanando e respirando.
+  for (let i = 0; i < 10; i++) frames.push({ tail: wag(i), bob: Math.floor(i / 5) % 2 === 1, tongue: true, blink: i === 6 })
+  // Agacha.
+  for (const bow of [1, 2, 3]) frames.push({ tail: wag(bow), bow })
+  // Agachado: au, au... abana... au!
+  const barks = new Set([2, 3, 6, 7, 18, 19])
+  for (let i = 0; i < 24; i++) {
+    frames.push({ tail: wag(i), bow: 3, bark: barks.has(i), tongue: !barks.has(i), ear: i === 12 || i === 13, bob: i >= 9 && i <= 14 && i % 2 === 0 })
+  }
+  // Levanta.
+  for (const bow of [2, 1]) frames.push({ tail: wag(bow), bow, tongue: true })
+  return frames
+})()
 /** Pose parada (para quem prefere menos movimento). */
-export const DOG_STILL: Pose = { tail: 0, tongue: true }
+export const DOG_STILL: Pose = { tail: 0, bow: 3, tongue: true }

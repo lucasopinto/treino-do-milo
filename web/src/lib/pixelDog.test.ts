@@ -40,4 +40,21 @@ describe('Milo em pixel art', () => {
     expect(DOG_TIMELINE.some((p) => p.blink)).toBe(true)
     expect(new Set(DOG_TIMELINE.map((p) => p.tail))).toEqual(new Set([-1, 0, 1]))
   })
+
+  it('agacha para brincar: a cabeça desce e a traseira com o rabinho fica em cima', () => {
+    const up = dogFrame({ tail: 0 })
+    const bow = dogFrame({ tail: 0, bow: 3 })
+    expect(firstRowWith(bow, DOG_COLORS.tan)).toBe(firstRowWith(up, DOG_COLORS.tan) + 3)
+    // A ponta do rabinho não sai do lugar.
+    expect(bow[10]![26]).toBe(DOG_COLORS.black)
+    expect(bow[10]![26]).toBe(up[10]![26])
+  })
+
+  it('late: boca aberta e risquinhos de som', () => {
+    expect(colorsIn(dogFrame({ tail: 0, bow: 3, bark: true }))).toContain(DOG_COLORS.bark)
+    const t = DOG_TIMELINE
+    expect(t.some((p) => p.bark && p.bow === 3)).toBe(true)
+    expect(t[0]!.bow ?? 0).toBe(0)
+    expect(Math.max(...t.map((p) => p.bow ?? 0))).toBe(3)
+  })
 })
