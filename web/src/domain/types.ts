@@ -108,4 +108,16 @@ export interface Settings extends BaseRecord {
   soundType: SoundType
   volume: number // 0..1
   remindersEnabled: boolean
+  /** Ficha do cachorro (opcionais: registros antigos não têm). */
+  dogBreed?: string
+  /** Data de nascimento, 'AAAA-MM-DD'. */
+  dogBirthDate?: string | null
+  /** Pesagens, da mais antiga para a mais nova. */
+  dogWeights?: DogWeight[]
+}
+
+export interface DogWeight {
+  id: string
+  at: number // ms
+  kg: number
 }

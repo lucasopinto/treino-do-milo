@@ -56,8 +56,7 @@ export function PixelDog({ scale = 4, label = 'Milo abanando o rabinho' }: { sca
   return (
     <canvas
       ref={ref}
-      role="img"
-      aria-label={label}
+      {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })}
       style={{ width: DOG_W * scale, height: DOG_H * scale, imageRendering: 'pixelated' }}
     />
   )

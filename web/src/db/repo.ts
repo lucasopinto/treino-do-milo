@@ -121,3 +121,14 @@ export async function restore(table: DeletableTable, id: string): Promise<void> 
   const cur = await db.table<BaseRecord, string>(table).get(id)
   if (cur) await db.table<BaseRecord, string>(table).put({ ...cur, deletedAt: null, ...touch(cur) })
 }
+
+/** Registra uma pesagem do cachorro (lê a versão mais nova das configurações antes). */
+export async function addDogWeight(kg: number, at = Date.now()): Promise<void> {
+  const s = await ensureSettings()
+  await updateSettings({ dogWeights: [...(s.dogWeights ?? []), { id: newId(), at, kg }].sort((a, b) => a.at - b.at) })
+}
+
+export async function removeDogWeight(id: string): Promise<void> {
+  const s = await ensureSettings()
+  await updateSettings({ dogWeights: (s.dogWeights ?? []).filter((w) => w.id !== id) })
+}

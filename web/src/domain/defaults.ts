@@ -20,6 +20,9 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'createdAt' | 'updatedAt' | 'delet
   soundType: 'clique',
   volume: 0.9,
   remindersEnabled: true,
+  dogBreed: 'Fox terrier de pelo curto',
+  dogBirthDate: null,
+  dogWeights: [],
 }
 
 export const CHECKLIST_ITEMS: { id: ChecklistItemId; label: string; hint: string }[] = [

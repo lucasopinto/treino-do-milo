@@ -1,6 +1,7 @@
 // Sons gerados na hora com a Web Audio API (sem arquivos, funciona offline).
 // Um único AudioContext, criado/destravado no primeiro toque, para latência mínima.
 import type { SoundType } from '../domain/types'
+import { readLocal, writeLocal } from './storage'
 
 type AC = typeof AudioContext
 let ctx: AudioContext | null = null
@@ -128,25 +129,47 @@ function playSilentMediaElement(): void {
   silentEl.play().catch(() => {})
 }
 
+// ---------- Música de outros apps × modo silencioso (iPhone) ----------
+//
+// "ambient" (padrão): os sons do app se misturam com a música que estiver tocando e respeitam a
+// chave de silêncio do iPhone. "playback": tocam mesmo no silencioso, mas o iOS PAUSA a música
+// de outros apps. Por isso o modo silencioso é uma opção, desligada de início.
+
+const SILENT_KEY = 'milo.playInSilentMode'
+
+export function getPlayInSilentMode(): boolean {
+  return readLocal(SILENT_KEY) === '1'
+}
+
+export function setPlayInSilentMode(on: boolean): void {
+  writeLocal(SILENT_KEY, on ? '1' : null)
+  applyAudioSession()
+}
+
+function applyAudioSession(): void {
+  const nav = typeof navigator === 'undefined' ? null : (navigator as Navigator & { audioSession?: { type: string } })
+  if (!nav?.audioSession) return
+  const want = getPlayInSilentMode() ? 'playback' : 'ambient'
+  if (nav.audioSession.type === want) return
+  try {
+    nav.audioSession.type = want
+  } catch {
+    /* navegador sem suporte */
+  }
+}
+
+// Já ao abrir o app: não deixa o iOS pausar a música de quem está ouvindo.
+applyAudioSession()
+
 /**
  * Chamar num toque do usuário: navegadores só liberam áudio depois de uma interação.
  * Atenção: no celular, `pointerdown` de toque NÃO conta como interação; contam
  * `pointerup`, `touchend`, `click` e `keydown`.
  */
 export function unlockAudio(): void {
-  // iOS 17+: tocar mesmo com a chave de silêncio ligada (o clicker precisa ser ouvido).
   const nav = navigator as Navigator & { audioSession?: { type: string } }
-  if (nav.audioSession) {
-    if (nav.audioSession.type !== 'playback') {
-      try {
-        nav.audioSession.type = 'playback'
-      } catch {
-        /* navegador sem suporte */
-      }
-    }
-  } else {
-    playSilentMediaElement()
-  }
+  if (nav.audioSession) applyAudioSession()
+  else if (getPlayInSilentMode()) playSilentMediaElement()
   const c = getCtx()
   if (!c) return
   // Toca um som vazio (necessário no iOS).

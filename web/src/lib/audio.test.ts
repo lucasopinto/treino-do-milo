@@ -65,12 +65,13 @@ afterEach(() => {
 })
 
 describe('áudio do clicker no celular', () => {
-  it('no primeiro toque cria o áudio e pede para tocar mesmo no modo silencioso', () => {
+  it('no primeiro toque cria o áudio sem pausar a música de outros apps', () => {
     expect(audio.audioHealthy()).toBe(false)
     audio.ensureAudio()
     expect(FakeAudioContext.created).toHaveLength(1)
     expect(audio.audioHealthy()).toBe(true)
-    expect((navigator as unknown as { audioSession: { type: string } }).audioSession.type).toBe('playback')
+    // "ambient": mistura com a música que estiver tocando (não pausa o Spotify etc.).
+    expect((navigator as unknown as { audioSession: { type: string } }).audioSession.type).toBe('ambient')
   })
 
   it('áudio funcionando não é recriado a cada toque', () => {
@@ -111,5 +112,19 @@ describe('áudio do clicker no celular', () => {
     FakeAudioContext.created[0]!.state = 'interrupted'
     audio.ensureAudio()
     expect(FakeAudioContext.created).toHaveLength(2)
+  })
+
+  it('com a opção "tocar no silencioso" ligada, usa o modo que toca no silencioso', () => {
+    const store = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    })
+    audio.setPlayInSilentMode(true)
+    expect((navigator as unknown as { audioSession: { type: string } }).audioSession.type).toBe('playback')
+    expect(audio.getPlayInSilentMode()).toBe(true)
+    audio.setPlayInSilentMode(false)
+    expect((navigator as unknown as { audioSession: { type: string } }).audioSession.type).toBe('ambient')
   })
 })

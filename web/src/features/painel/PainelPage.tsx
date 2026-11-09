@@ -4,6 +4,9 @@ import { ChevronRight, Droplet, Footprints, MousePointerClick, Play, type Lucide
 import { Card, ProgressRing } from '../../components/ui'
 import { DogAvatar } from '../../components/DogAvatar'
 import { PixelDog } from '../../components/PixelDog'
+import { DogProfileSheet } from './DogProfileSheet'
+import { ageText, formatKg, latestWeight } from '../../domain/dogProfile'
+import { DEFAULT_SETTINGS } from '../../domain/defaults'
 import { TrainerSelector } from '../../components/TrainerSelector'
 import { useActivities, useChecklistDays, useEliminations, useSessions, useSettings } from '../../hooks/useData'
 import { useNow } from '../../hooks/useNow'
@@ -29,6 +32,10 @@ export function PainelPage() {
   const summary = daySummary(now, { sessions, eliminations: elims, activities })
   const streak = accidentFreeStreak(elims, now)
   const [xixiOpen, setXixiOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const age = ageText(settings.dogBirthDate, now)
+  const weight = latestWeight(settings.dogWeights)
+  const dogInfo = [settings.dogBreed ?? DEFAULT_SETTINGS.dogBreed, age, weight && formatKg(weight.kg)].filter(Boolean).join(' · ')
 
   // O relógio mostra a hora de quem está no perfil (ex.: perfil do pai = hora de Portugal).
   const { trainer } = useTrainer()
@@ -63,14 +70,24 @@ export function PainelPage() {
         )}
       </section>
 
-      <div className="flex justify-center">
-        {/* Fundo claro e grama: o contorno preto do desenho some no tema escuro. */}
-        <div className="rounded-2xl border-b-4 border-green-600 bg-sky-100 px-6 pt-1 dark:bg-stone-600">
-          <PixelDog label={`${settings.dogName} abanando o rabinho`} />
-        </div>
+      <div className="flex flex-col items-center gap-1">
+        {/* O Milo animado é o botão da ficha (raça, idade e peso). Fundo claro e grama: o contorno
+            preto do desenho some no tema escuro. */}
+        <button
+          type="button"
+          onClick={() => setProfileOpen(true)}
+          aria-label={`Ficha do ${settings.dogName}: raça, idade e peso${dogInfo ? `. ${dogInfo}` : ''}`}
+          className="rounded-2xl border-b-4 border-green-600 bg-sky-100 px-6 pt-1 transition active:scale-95 dark:bg-stone-600"
+        >
+          <PixelDog label="" />
+        </button>
+        <span className="text-center text-sm text-stone-600 dark:text-stone-400" aria-hidden>
+          {dogInfo || `Toque no ${settings.dogName} para preencher raça, idade e peso`}
+        </span>
       </div>
 
       <NextOutingCard now={now} />
+      <DogProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} dogName={settings.dogName} />
 
       <div className="grid grid-cols-2 gap-3">
         <QuickAction icon={Play} label="Iniciar sessão" tone="bg-brand-700 active:bg-brand-800" onClick={() => navigate('/treino')} />
