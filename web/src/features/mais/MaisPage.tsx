@@ -1,9 +1,11 @@
 import { Link } from 'react-router'
-import { BarChart3, ChevronRight, Footprints, History, ListChecks, MousePointerClick, Settings, type LucideIcon } from 'lucide-react'
+import { BarChart3, ChevronRight, Footprints, History, Home, ListChecks, MousePointerClick, Settings, type LucideIcon } from 'lucide-react'
+import { useSyncStatus } from '../../sync/controller'
 import { PageHeader } from '../../components/ui'
 import { isIOS, isStandalone } from '../../lib/pwa'
 
 const items: { to: string; label: string; desc: string; icon: LucideIcon }[] = [
+  { to: '/casa', label: 'Casa compartilhada', desc: '', icon: Home },
   { to: '/atividade', label: 'Atividade física', desc: 'Cronômetro de passeio e brincadeira, meta do dia', icon: Footprints },
   { to: '/checklist', label: 'Nada é de graça', desc: 'Checklist diário', icon: ListChecks },
   { to: '/historico', label: 'Histórico', desc: 'Tudo o que foi registrado, com filtros', icon: History },
@@ -12,7 +14,17 @@ const items: { to: string; label: string; desc: string; icon: LucideIcon }[] = [
   { to: '/configuracoes', label: 'Configurações', desc: 'Cachorro, treinadores, horários, sons, backup', icon: Settings },
 ]
 
+const syncDesc: Record<string, string> = {
+  off: 'Usar os mesmos dados nos dois celulares',
+  idle: 'Sincronizado',
+  syncing: 'Sincronizando…',
+  offline: 'Sem internet: envia depois',
+  error: 'Erro ao sincronizar: toque para ver',
+  removed: 'Este celular foi removido da casa',
+}
+
 export function MaisPage() {
+  const sync = useSyncStatus()
   return (
     <>
       <PageHeader title="Mais" />
@@ -28,7 +40,7 @@ export function MaisPage() {
               </span>
               <span className="flex-1">
                 <span className="block font-bold">{label}</span>
-                <span className="block text-sm text-stone-600 dark:text-stone-400">{desc}</span>
+                <span className="block text-sm text-stone-600 dark:text-stone-400">{to === '/casa' ? syncDesc[sync.phase] : desc}</span>
               </span>
               <ChevronRight aria-hidden className="text-stone-500" />
             </Link>

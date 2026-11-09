@@ -16,6 +16,7 @@ import { NotificationBanner } from '../xixi/XixiPage'
 import { SoundSettings } from '../clicker/SoundSettings'
 import { BackupSection } from './BackupSection'
 import { sortOutings } from '../../domain/schedule'
+import { getSyncConfig, markFullResync } from '../../sync/controller'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -225,7 +226,10 @@ export function ConfiguracoesPage() {
         </Section>
 
         <Section title="Apagar tudo">
-          <p className="mb-3 text-stone-600 dark:text-stone-400">Apaga todos os dados deste celular. Faça um backup antes.</p>
+          <p className="mb-3 text-stone-600 dark:text-stone-400">
+            Apaga todos os dados deste celular. Faça um backup antes.
+            {getSyncConfig() && ' Como este celular está numa casa compartilhada, os dados da casa voltam na próxima sincronização. Para sair da casa, use Mais → Casa compartilhada.'}
+          </p>
           <Button
             tone="red"
             className="w-full"
@@ -233,6 +237,7 @@ export function ConfiguracoesPage() {
               if (!window.confirm('Apagar TODOS os dados deste celular? Isso não pode ser desfeito.')) return
               if (!window.confirm('Tem certeza? Sem backup, os dados se perdem.')) return
               await wipeAll()
+              markFullResync({ resetCursor: true })
               toast('Todos os dados foram apagados.', { tone: 'info' })
               setDemo(false)
             }}

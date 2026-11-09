@@ -19,8 +19,12 @@ function stamp<T extends BaseRecord>(data: NewRecord<T>, id: string = newId(), n
   return { ...data, id, createdAt: now, updatedAt: now, deletedAt: null, deviceId: getDeviceId() } as T
 }
 
-function touch() {
-  return { updatedAt: Date.now(), deviceId: getDeviceId() }
+/**
+ * Marca uma edição. O horário nunca fica menor que o da versão editada, para a edição
+ * sempre vencer a versão anterior na sincronização, mesmo com o relógio do celular atrasado.
+ */
+function touch(prev?: Pick<BaseRecord, 'updatedAt'>) {
+  return { updatedAt: Math.max(Date.now(), (prev?.updatedAt ?? 0) + 1), deviceId: getDeviceId() }
 }
 
 // ---------- Configurações ----------
@@ -39,7 +43,7 @@ export async function ensureSettings(): Promise<Settings> {
 
 export async function updateSettings(patch: Partial<Omit<Settings, keyof BaseRecord>>): Promise<void> {
   const current = await ensureSettings()
-  await db.settings.put({ ...current, ...patch, ...touch() })
+  await db.settings.put({ ...current, ...patch, ...touch(current) })
 }
 
 // ---------- Sessões ----------
@@ -59,7 +63,8 @@ export async function addElimination(data: NewRecord<Elimination>): Promise<Elim
 }
 
 export async function updateElimination(id: string, patch: Partial<NewRecord<Elimination>>): Promise<void> {
-  await db.eliminations.update(id, { ...patch, ...touch() })
+  const cur = await db.eliminations.get(id)
+  if (cur) await db.eliminations.put({ ...cur, ...patch, ...touch(cur) })
 }
 
 // ---------- Atividade ----------
@@ -75,7 +80,7 @@ export async function addActivity(data: NewRecord<Activity>): Promise<Activity> 
 export async function setChecklistItem(dayKey: string, item: ChecklistItemId, value: boolean): Promise<void> {
   const existing = await db.checklist.get(dayKey)
   if (existing) {
-    await db.checklist.put({ ...existing, items: { ...existing.items, [item]: value }, ...touch() })
+    await db.checklist.put({ ...existing, items: { ...existing.items, [item]: value }, ...touch(existing) })
   } else {
     const items = { comida: false, passeio: false, brincadeira: false, carinho: false, [item]: value }
     await db.checklist.put(stamp<ChecklistDay>({ items }, dayKey))
@@ -94,7 +99,7 @@ export async function setSkillLevel(skillId: SkillId, levelIndex: number, traine
       levelIndex,
       levelChangedAt: now,
       history: [...existing.history, change],
-      ...touch(),
+      ...touch(existing),
     })
   } else {
     await db.skillProgress.put(
@@ -108,9 +113,11 @@ export async function setSkillLevel(skillId: SkillId, levelIndex: number, traine
 export type DeletableTable = 'sessions' | 'eliminations' | 'activities'
 
 export async function softDelete(table: DeletableTable, id: string): Promise<void> {
-  await db.table(table).update(id, { deletedAt: Date.now(), ...touch() })
+  const cur = await db.table<BaseRecord, string>(table).get(id)
+  if (cur) await db.table<BaseRecord, string>(table).put({ ...cur, deletedAt: Date.now(), ...touch(cur) })
 }
 
 export async function restore(table: DeletableTable, id: string): Promise<void> {
-  await db.table(table).update(id, { deletedAt: null, ...touch() })
+  const cur = await db.table<BaseRecord, string>(table).get(id)
+  if (cur) await db.table<BaseRecord, string>(table).put({ ...cur, deletedAt: null, ...touch(cur) })
 }

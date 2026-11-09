@@ -4,6 +4,7 @@ import { Button, Sheet } from '../../components/ui'
 import { useToast } from '../../components/Toast'
 import { backupFileName, exportBackup, importBackup, validateBackup, type BackupFile } from '../../db/backup'
 import { feedbackOk } from '../../lib/feedback'
+import { markFullResync } from '../../sync/controller'
 
 async function makeFile(): Promise<File> {
   const data = await exportBackup()
@@ -57,6 +58,8 @@ export function BackupSection() {
     if (!pending) return
     if (mode === 'substituir' && !window.confirm('Isso apaga todos os dados deste celular e coloca os do backup. Continuar?')) return
     const r = await importBackup(pending, mode)
+    // Registros importados de outro celular também vão para a casa (se houver).
+    markFullResync()
     feedbackOk()
     setPending(null)
     toast(mode === 'substituir' ? 'Dados substituídos pelo backup.' : `Pronto: ${r.added} novos, ${r.updated} atualizados.`)

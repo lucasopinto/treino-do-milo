@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 DEFAULT_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:4173",
+    "http://127.0.0.1:5173",  # segundo "celular" nos testes locais (outro endereço = outros dados)
     "https://lucasopinto.github.io",
 ]
 

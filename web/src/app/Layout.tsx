@@ -5,9 +5,19 @@ import { ReminderWatcher } from '../features/xixi/ReminderWatcher'
 import { ActiveSessionPill } from '../features/sessao/ActiveSessionPill'
 import { useSettings } from '../hooks/useData'
 import { configureAudio, unlockAudio } from '../lib/audio'
+import { startSyncLoop, useSyncStatus } from '../sync/controller'
+import { useToast } from '../components/Toast'
 
 export function Layout() {
   const settings = useSettings()
+  const sync = useSyncStatus()
+  const toast = useToast()
+
+  useEffect(() => startSyncLoop(), [])
+
+  useEffect(() => {
+    if (sync.lastPulled > 0) toast(sync.lastPulled === 1 ? '1 registro novo do outro celular.' : `${sync.lastPulled} registros novos do outro celular.`, { tone: 'info' })
+  }, [sync.lastSyncAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => configureAudio(settings.soundType, settings.volume), [settings.soundType, settings.volume])
 

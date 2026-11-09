@@ -16,6 +16,7 @@ import { AtividadePage } from '../features/atividade/AtividadePage'
 import { ChecklistPage } from '../features/checklist/ChecklistPage'
 import { HistoricoPage } from '../features/historico/HistoricoPage'
 import { ConfiguracoesPage } from '../features/configuracoes/ConfiguracoesPage'
+import { CasaPage } from '../features/casa/CasaPage'
 
 // Gráficos carregados só quando a tela é aberta.
 const EstatisticasPage = lazy(() => import('../features/estatisticas/EstatisticasPage'))
@@ -37,6 +38,7 @@ const router = createHashRouter([
       { path: 'checklist', element: <ChecklistPage /> },
       { path: 'historico', element: <HistoricoPage /> },
       { path: 'configuracoes', element: <ConfiguracoesPage /> },
+      { path: 'casa', element: <CasaPage /> },
       {
         path: 'estatisticas',
         element: (
