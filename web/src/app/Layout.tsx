@@ -4,7 +4,7 @@ import { BottomNav } from './BottomNav'
 import { ReminderWatcher } from '../features/xixi/ReminderWatcher'
 import { ActiveSessionPill } from '../features/sessao/ActiveSessionPill'
 import { useSettings } from '../hooks/useData'
-import { audioReady, configureAudio, unlockAudio } from '../lib/audio'
+import { configureAudio, ensureAudio } from '../lib/audio'
 import { startSyncLoop, useSyncStatus } from '../sync/controller'
 import { refreshPushSubscription } from '../sync/push'
 import { useToast } from '../components/Toast'
@@ -28,11 +28,9 @@ export function Layout() {
   useEffect(() => {
     // Navegadores só liberam som num toque de verdade. No celular, `pointerdown` não conta:
     // contam `pointerup`, `touchend`, `click` e `keydown`. Fica ouvindo sempre (não só uma vez),
-    // porque o iOS volta a suspender o som quando o app vai para o fundo.
+    // porque o iOS derruba o som quando a tela bloqueia ou o app fica parado.
     const events = ['pointerup', 'touchend', 'click', 'keydown'] as const
-    const unlock = () => {
-      if (!audioReady()) unlockAudio()
-    }
+    const unlock = () => ensureAudio()
     for (const e of events) window.addEventListener(e, unlock, { capture: true, passive: true })
     return () => {
       for (const e of events) window.removeEventListener(e, unlock, { capture: true })

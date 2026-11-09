@@ -8,6 +8,12 @@ let noise: AudioBuffer | null = null
 let volume = 0.9
 let clickType: SoundType = 'clique'
 
+let createdAt = 0
+/** O iOS derrubou o áudio (tela bloqueada, app no fundo): recriar no próximo toque. */
+let stale = false
+/** Última leitura do relógio do áudio, para notar quando ele para de andar. */
+let snap: { wall: number; audio: number } | null = null
+
 function getCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!ctx) {
@@ -15,6 +21,9 @@ function getCtx(): AudioContext | null {
     if (!Ctor) return null
     try {
       ctx = new Ctor({ latencyHint: 'interactive' })
+      createdAt = performance.now()
+      stale = false
+      snap = null
     } catch {
       return null
     }
@@ -24,9 +33,53 @@ function getCtx(): AudioContext | null {
   return ctx
 }
 
-/** O som está liberado e tocando? */
-export function audioReady(): boolean {
-  return ctx?.state === 'running'
+/**
+ * O som está funcionando de verdade? No iOS, depois de a tela bloquear ou o app ficar
+ * parado, o áudio às vezes diz que está 'running' mas fica mudo, com o relógio parado.
+ */
+export function audioHealthy(): boolean {
+  if (!ctx || stale || ctx.state !== 'running') return false
+  const wall = performance.now()
+  const audio = ctx.currentTime
+  if (snap && wall - snap.wall > 300) {
+    const wallSec = (wall - snap.wall) / 1000
+    if (audio - snap.audio < wallSec * 0.5) {
+      stale = true // relógio do áudio parado: áudio "zumbi"
+      snap = null
+      return false
+    }
+  }
+  snap = { wall, audio }
+  return true
+}
+
+/**
+ * Chamar em todo toque (pointerup/touchend/click/keydown): libera o som e, se o iOS
+ * o derrubou, joga fora o áudio velho e cria um novo. É o que "fechar e abrir o app" fazia.
+ */
+export function ensureAudio(): void {
+  if (audioHealthy()) return
+  // Recém-criado: ainda pode estar terminando de ligar; só pede para continuar.
+  if (ctx && !stale && performance.now() - createdAt < 1000) {
+    ctx.resume().catch(() => {})
+    return
+  }
+  if (ctx) {
+    ctx.close().catch(() => {})
+    ctx = null
+    noise = null
+  }
+  unlockAudio()
+}
+
+if (typeof document !== 'undefined') {
+  // Tela bloqueada ou app no fundo: o iOS costuma estragar o áudio. Recria no próximo toque.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') stale = true
+  })
+  window.addEventListener('pagehide', () => {
+    stale = true
+  })
 }
 
 function getNoise(c: AudioContext): AudioBuffer {

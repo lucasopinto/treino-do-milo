@@ -1,5 +1,5 @@
 import { useRef, type PointerEvent, type KeyboardEvent } from 'react'
-import { playClick } from '../../lib/audio'
+import { audioHealthy, ensureAudio, playClick } from '../../lib/audio'
 import { vibrate } from '../../lib/haptics'
 
 /**
@@ -18,9 +18,13 @@ export function ClickerButton({
   hint?: string
 }) {
   const ref = useRef<HTMLButtonElement>(null)
+  // Som que ficou para o fim do toque: o áudio precisava ser (re)ligado, e no celular
+  // só dá para fazer isso quando o dedo sai da tela.
+  const pendingSound = useRef(false)
 
   function fire() {
-    playClick()
+    if (audioHealthy()) playClick()
+    else pendingSound.current = true
     vibrate(15)
     const el = ref.current
     if (el) {
@@ -37,10 +41,18 @@ export function ClickerButton({
     fire()
   }
 
+  function flushPendingSound() {
+    if (!pendingSound.current) return
+    pendingSound.current = false
+    ensureAudio()
+    playClick()
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
       e.preventDefault()
       fire()
+      flushPendingSound() // tecla já conta como toque: dá para ligar o som na hora
     }
   }
 
@@ -54,6 +66,9 @@ export function ClickerButton({
       ref={ref}
       type="button"
       onPointerDown={onPointerDown}
+      onPointerUp={flushPendingSound}
+      onTouchEnd={flushPendingSound}
+      onPointerCancel={() => (pendingSound.current = false)}
       onKeyDown={onKeyDown}
       onContextMenu={(e) => e.preventDefault()}
       aria-label={hint ? `${label}. ${hint}` : label}
