@@ -23,10 +23,10 @@ function draw(canvas: HTMLCanvasElement, frame: Frame, scale: number) {
 }
 
 /**
- * O Milo em pixel art, de frente, abanando o rabinho como um personagem de jogo.
+ * O Milo em pixel art, de frente, parado como um personagem de RPG: abana o rabinho, respira e pisca.
  * Desenhado num canvas, sem arquivos. Com "reduzir movimento" ligado no celular, fica parado.
  */
-export function PixelDog({ scale = 5, label = 'Milo abanando o rabinho' }: { scale?: number; label?: string }) {
+export function PixelDog({ scale = 4, label = 'Milo abanando o rabinho' }: { scale?: number; label?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
