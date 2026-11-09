@@ -8,6 +8,8 @@ import { XixiPage } from '../features/xixi/XixiPage'
 import { TreinoPage } from '../features/sessao/TreinoPage'
 import { SessionProvider } from '../features/sessao/SessionContext'
 import { ClickerPage } from '../features/clicker/ClickerPage'
+import { ProgressoPage } from '../features/progresso/ProgressoPage'
+import { SkillDetailPage } from '../features/progresso/SkillDetailPage'
 
 // HashRouter (#/rota) funciona no GitHub Pages e offline sem configuração de servidor.
 const router = createHashRouter([
@@ -18,8 +20,8 @@ const router = createHashRouter([
       { path: 'treino', element: <TreinoPage /> },
       { path: 'clicker', element: <ClickerPage /> },
       { path: 'xixi', element: <XixiPage /> },
-      { path: 'progresso', element: <Placeholder title="Progresso" /> },
-      { path: 'progresso/:skillId', element: <Placeholder title="Progresso" /> },
+      { path: 'progresso', element: <ProgressoPage /> },
+      { path: 'progresso/:skillId', element: <SkillDetailPage /> },
       { path: 'mais', element: <Placeholder title="Mais" /> },
       { path: '*', element: <Placeholder title="Página não encontrada" /> },
     ],
