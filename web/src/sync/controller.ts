@@ -7,6 +7,7 @@ import { getDeviceId } from '../lib/ids'
 import { readLocalJson, writeLocalJson } from '../lib/storage'
 import { api, ApiError, DEFAULT_API_URL, NetworkError, normalizeBaseUrl, type AuthOut, type HouseholdOut, type InviteOut } from './api'
 import { runSync, type SyncConfig } from './engine'
+import { onScheduleChange, uploadScheduleIfChanged } from './schedule'
 
 const CFG_KEY = 'milo.sync'
 const DEBOUNCE_MS = 2_000
@@ -108,6 +109,8 @@ async function syncRound() {
     // A configuração pode ter mudado (saiu da casa) enquanto sincronizava.
     if (getSyncConfig()?.token !== cfg.token) return
     saveConfig(r.cfg)
+    // Agenda de saídas e fuso deste celular (para os avisos do servidor chegarem no horário local).
+    await uploadScheduleIfChanged({ baseUrl: cfg.apiUrl, token: cfg.token })
     setStatus({ phase: 'idle', lastSyncAt: r.cfg.lastSyncAt, lastPulled: r.pulled })
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
@@ -148,6 +151,7 @@ export function startSyncLoop(): () => void {
       return undefined
     })
   }
+  onScheduleChange(() => requestSync(500))
   const onVisible = () => document.visibilityState === 'visible' && void syncNow()
   const onOnline = () => void syncNow()
   document.addEventListener('visibilitychange', onVisible)

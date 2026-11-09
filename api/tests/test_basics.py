@@ -50,3 +50,13 @@ def test_url_do_postgres_usa_psycopg():
         == "postgresql+psycopg://u:p@h/db?sslmode=require"
     )
     assert Settings(database_url="sqlite:///x.db").sqlalchemy_url == "sqlite:///x.db"
+
+
+def test_cors_libera_todos_os_metodos_usados_pelo_app(client):
+    """O navegador pergunta antes (preflight) se pode usar o método; sem isso a chamada é bloqueada."""
+    for method in ("GET", "POST", "PUT", "PATCH", "DELETE"):
+        r = client.options(
+            "/devices/me/schedule",
+            headers={"Origin": "https://lucasopinto.github.io", "Access-Control-Request-Method": method},
+        )
+        assert r.status_code == 200, method

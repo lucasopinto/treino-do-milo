@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Plus, Trash2, Wand2 } from 'lucide-react'
 import { Button, Sheet } from '../../components/ui'
 import { useToast } from '../../components/Toast'
-import { updateSettings } from '../../db/repo'
 import { useSettings } from '../../hooks/useData'
 import { outingsFromMeals, sortOutings } from '../../domain/schedule'
 import { newId } from '../../lib/ids'
+import { useOutingSchedule } from '../../sync/schedule'
+import { getSyncConfig } from '../../sync/controller'
 import { feedbackOk } from '../../lib/feedback'
 import type { OutingTime } from '../../domain/types'
 
@@ -19,8 +20,9 @@ export function OutingScheduleEditor({ open, onClose }: { open: boolean; onClose
 
 function EditorBody({ onClose }: { onClose: () => void }) {
   const settings = useSettings()
+  const schedule = useOutingSchedule()
   const toast = useToast()
-  const [list, setList] = useState<OutingTime[]>(() => sortOutings(settings.outingTimes))
+  const [list, setList] = useState<OutingTime[]>(() => sortOutings(schedule.outingTimes))
 
   const change = (id: string, patch: Partial<OutingTime>) =>
     setList((l) => l.map((o) => (o.id === id ? { ...o, ...patch } : o)))
@@ -36,9 +38,9 @@ function EditorBody({ onClose }: { onClose: () => void }) {
     setList((l) => sortOutings([...l, ...extra]))
   }
 
-  async function save() {
+  function save() {
     const clean = list.filter((o) => o.time).map((o) => ({ ...o, label: o.label.trim() || 'Saída' }))
-    await updateSettings({ outingTimes: sortOutings(clean) })
+    schedule.update({ outingTimes: sortOutings(clean) })
     feedbackOk()
     toast('Agenda salva.')
     onClose()
@@ -46,6 +48,11 @@ function EditorBody({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {getSyncConfig() && (
+        <p className="rounded-xl bg-sky-50 p-3 text-sky-900 dark:bg-sky-950 dark:text-sky-100">
+          Estes horários são só deste celular, no horário daqui. Cada pessoa da casa tem a sua agenda.
+        </p>
+      )}
       <p className="text-stone-600 dark:text-stone-400">
         Saídas fixas ajudam o {settings.dogName} a entender a rotina. Lembre também de sair depois de brincar e antes de vocês saírem de casa.
       </p>
@@ -89,7 +96,7 @@ function EditorBody({ onClose }: { onClose: () => void }) {
           Após refeições
         </Button>
       </div>
-      <Button size="lg" onClick={() => void save()}>
+      <Button size="lg" onClick={save}>
         Salvar agenda
       </Button>
     </div>

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_session
 from ..models import Device, Household, Invite, PushSubscription
-from ..schemas import AuthOut, CreateHousehold, DeviceOut, HouseholdOut, InviteOut, JoinHousehold, RenameDevice
+from ..schemas import AuthOut, CreateHousehold, DeviceOut, DeviceScheduleIn, HouseholdOut, InviteOut, JoinHousehold, RenameDevice
 from ..security import client_ip, current_device, hash_token, join_limiter, new_invite_code, new_token, normalize_code
 from ..services.schedule_cache import cache
 from ..util import new_id, now_ms
@@ -124,6 +124,20 @@ def get_household(device: Device = Depends(current_device), session: Session = D
 def rename_device(body: RenameDevice, device: Device = Depends(current_device), session: Session = Depends(get_session)) -> Response:
     device.name = body.name.strip()
     session.commit()
+    return Response(status_code=204)
+
+
+@router.put("/devices/me/schedule", status_code=204, summary="Grava a agenda de saídas e o fuso deste aparelho")
+def set_schedule(body: DeviceScheduleIn, device: Device = Depends(current_device), session: Session = Depends(get_session)) -> Response:
+    """Cada aparelho tem a sua agenda, no seu fuso (ex.: um celular no Brasil e outro em Portugal).
+    Os avisos do servidor para este aparelho seguem esta agenda."""
+    device.schedule = {
+        "outingTimes": [o.model_dump() for o in body.outing_times],
+        "remindersEnabled": body.reminders_enabled,
+    }
+    device.timezone = body.timezone
+    session.commit()
+    cache.invalidate()
     return Response(status_code=204)
 
 

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { BellOff, BellRing, CalendarClock } from 'lucide-react'
 import { Button, Card, Empty, PageHeader } from '../../components/ui'
-import { useEliminations, useSettings } from '../../hooks/useData'
+import { useEliminations } from '../../hooks/useData'
 import { useNow } from '../../hooks/useNow'
 import { addDays, dayKey, startOfDay } from '../../domain/dates'
 import { sortOutings } from '../../domain/schedule'
@@ -12,12 +12,13 @@ import { EliminationQuickGrid } from './EliminationSheet'
 import { EliminationList } from './EliminationList'
 import { NextOutingCard } from './NextOutingCard'
 import { OutingScheduleEditor } from './OutingScheduleEditor'
+import { useOutingSchedule } from '../../sync/schedule'
 
 const XixiCharts = lazy(() => import('./XixiCharts'))
 
 export function XixiPage() {
+  const schedule = useOutingSchedule()
   const now = useNow(1000)
-  const settings = useSettings()
   const since = addDays(startOfDay(now), -35).getTime()
   const elims = useEliminations(since) ?? []
   const today = elims.filter((e) => dayKey(e.at) === dayKey(now))
@@ -48,7 +49,7 @@ export function XixiPage() {
             </Button>
           </div>
           <ul className="grid grid-cols-2 gap-2">
-            {sortOutings(settings.outingTimes).map((o) => (
+            {sortOutings(schedule.outingTimes).map((o) => (
               <li key={o.id} className="rounded-xl bg-stone-100 px-3 py-2 dark:bg-stone-800">
                 <span className="block text-lg font-bold tabular">{o.time}</span>
                 <span className="block text-sm text-stone-600 dark:text-stone-400">{o.label}</span>

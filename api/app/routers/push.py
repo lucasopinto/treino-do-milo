@@ -86,24 +86,28 @@ def run_tick(session: Session, now_utc: datetime) -> TickOut:
         return out
     touched_db = not cache.loaded
     cache.ensure(session)  # só lê o banco se algo mudou desde a última vez
-    for hid, house_settings in list(cache.households.items()):
-        out.households += 1
-        for due in reminders.reminders_for(house_settings, now_utc, settings.timezone):
-            key = (hid, due.day, due.outing_id)
+    out.households = len({t.household_id for t in cache.targets.values()})
+    for did, target in list(cache.targets.items()):
+        house = target.settings or {}
+        # Agenda própria do aparelho (no fuso dele); sem ela, a agenda antiga da casa no fuso padrão.
+        agenda = {**house, **target.schedule} if target.schedule is not None else house
+        tz = target.timezone or settings.timezone
+        for due in reminders.reminders_for(agenda, now_utc, tz):
+            key = (did, due.day, due.outing_id)
             if key in cache.sent:
                 continue
             cache.sent.add(key)
             touched_db = True
             # Marca no banco antes de enviar: depois de reiniciar o servidor, ou com dois ticks juntos, não repete.
-            session.add(SentReminder(household_id=hid, day=due.day, outing_id=due.outing_id, sent_at=now_ms()))
+            session.add(SentReminder(device_id=did, day=due.day, outing_id=due.outing_id, sent_at=now_ms()))
             try:
                 session.commit()
             except IntegrityError:
                 session.rollback()
                 continue
             out.reminders += 1
-            payload = reminders.message(house_settings or {}, due)
-            subs = session.scalars(select(PushSubscription).where(PushSubscription.household_id == hid)).all()
+            payload = reminders.message(agenda, due)
+            subs = session.scalars(select(PushSubscription).where(PushSubscription.device_id == did)).all()
             for sub in subs:
                 r = webpush.send(sub, payload)
                 out.sent += r.ok
@@ -118,7 +122,7 @@ def run_tick(session: Session, now_utc: datetime) -> TickOut:
         session.execute(delete(SentReminder).where(SentReminder.sent_at < cutoff))
         session.commit()
         today = now_utc.strftime("%Y-%m-%d")
-        cache.sent = {k for k in cache.sent if k[1] >= _yesterday(today)}
+        cache.sent = {k for k in cache.sent if k[1] >= _yesterday(_yesterday(today))}
     return out
 
 

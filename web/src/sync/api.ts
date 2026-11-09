@@ -26,7 +26,7 @@ export class NetworkError extends Error {
 export interface ApiOptions {
   baseUrl: string
   token?: string | null
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   /** O servidor grátis pode levar ~1 min para acordar; criar/entrar na casa espera mais. */
   timeoutMs?: number

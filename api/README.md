@@ -15,6 +15,7 @@ A documentação interativa fica em **`/docs`**, com todos os endpoints, exemplo
 | POST | `/households/invites` | Gera um código novo (vale uma vez, por 24 h) | token |
 | GET | `/households/me` | Dados da casa e lista de aparelhos | token |
 | PATCH | `/devices/me` | Renomeia este aparelho | token |
+| PUT | `/devices/me/schedule` | Grava a agenda de saídas e o fuso deste aparelho (os avisos seguem o horário local dele) | token |
 | DELETE | `/devices/{id}` | Remove um aparelho (ou sai da casa). Se o último sair, a casa é apagada do servidor | token |
 | POST | `/sync/push` | Envia registros criados ou editados (até 500 por vez) | token |
 | GET | `/sync/pull?since=N` | Recebe o que mudou depois do `seq` N (páginas de 500) | token |
@@ -35,7 +36,7 @@ O token vai no cabeçalho `Authorization: Bearer <token>`. O servidor guarda só
 
 ### Por que o `/cron/tick` não acorda o banco
 
-O banco grátis do Neon dorme depois de ~5 min sem uso e o plano dá 100 horas de computação por mês. Um tick por minuto consultando o banco o deixaria acordado o mês inteiro (~186 h). Por isso a agenda de saídas fica **em memória** e só é relida quando muda: configurações sincronizadas, inscrições ou aparelhos. O banco só é consultado quando há um aviso para mandar.
+O banco grátis do Neon dorme depois de ~5 min sem uso e o plano dá 100 horas de computação por mês. Um tick por minuto consultando o banco o deixaria acordado o mês inteiro (~186 h). Por isso a agenda de saídas fica **em memória** e só é relida quando muda: configurações sincronizadas, inscrições, aparelhos ou a agenda de um aparelho. O banco só é consultado quando há um aviso para mandar.
 
 ## Rodar no computador
 
@@ -67,7 +68,7 @@ cd api
 Os testes cobrem:
 - criar e entrar na casa, convites, limite de tentativas, remover aparelho;
 - sincronização: o mais recente vence, correções, paginação, casas separadas, relógio adiantado;
-- agenda dos lembretes e dedupe;
+- agenda dos lembretes por aparelho e fuso (ex.: Brasil e Portugal) e dedupe;
 - um envio de Web Push **real** para um serviço local, conferindo a criptografia (aes128gcm) e a assinatura VAPID;
 - migrações iguais aos modelos.
 

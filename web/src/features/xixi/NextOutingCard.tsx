@@ -1,12 +1,12 @@
 import { Link } from 'react-router'
 import { DoorOpen } from 'lucide-react'
-import { useSettings } from '../../hooks/useData'
+import { useOutingSchedule } from '../../sync/schedule'
 import { formatClock, formatDurationText, formatHM, daysBetween } from '../../domain/dates'
 import { nextOuting } from '../../domain/schedule'
 
 export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boolean }) {
-  const settings = useSettings()
-  const next = nextOuting(settings.outingTimes, now)
+  const { outingTimes } = useOutingSchedule()
+  const next = nextOuting(outingTimes, now)
   const content = !next ? (
     <span className="text-lg">Nenhum horário de saída configurado.</span>
   ) : (

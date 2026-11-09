@@ -86,12 +86,12 @@ describe('áudio do clicker no celular', () => {
     audio.ensureAudio()
     vi.advanceTimersByTime(2000)
     expect(audio.audioHealthy()).toBe(true)
-    FakeAudioContext.created[0].frozen = true
+    FakeAudioContext.created[0]!.frozen = true
     vi.advanceTimersByTime(2000)
     expect(audio.audioHealthy()).toBe(false)
     audio.ensureAudio()
     expect(FakeAudioContext.created).toHaveLength(2)
-    expect(FakeAudioContext.created[0].closed).toBe(true)
+    expect(FakeAudioContext.created[0]!.closed).toBe(true)
     expect(audio.audioHealthy()).toBe(true)
   })
 
@@ -99,7 +99,7 @@ describe('áudio do clicker no celular', () => {
     audio.ensureAudio()
     vi.advanceTimersByTime(2000)
     ;(document as unknown as { visibilityState: string }).visibilityState = 'hidden'
-    docListeners.visibilitychange()
+    docListeners.visibilitychange!()
     expect(audio.audioHealthy()).toBe(false)
     audio.ensureAudio()
     expect(FakeAudioContext.created).toHaveLength(2)
@@ -108,7 +108,7 @@ describe('áudio do clicker no celular', () => {
   it('áudio suspenso pelo sistema também é recriado', () => {
     audio.ensureAudio()
     vi.advanceTimersByTime(2000)
-    FakeAudioContext.created[0].state = 'interrupted'
+    FakeAudioContext.created[0]!.state = 'interrupted'
     audio.ensureAudio()
     expect(FakeAudioContext.created).toHaveLength(2)
   })

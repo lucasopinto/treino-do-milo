@@ -17,6 +17,7 @@ import { SoundSettings } from '../clicker/SoundSettings'
 import { BackupSection } from './BackupSection'
 import { sortOutings } from '../../domain/schedule'
 import { getSyncConfig, markFullResync } from '../../sync/controller'
+import { useOutingSchedule } from '../../sync/schedule'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -47,6 +48,7 @@ function TextSetting({ label, value, onSave }: { label: string; value: string; o
 
 export function ConfiguracoesPage() {
   const settings = useSettings()
+  const schedule = useOutingSchedule()
   const toast = useToast()
   const photoInput = useRef<HTMLInputElement>(null)
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
@@ -140,18 +142,18 @@ export function ConfiguracoesPage() {
           <MealTimes />
           <div className="mt-4 flex items-center justify-between gap-2">
             <p className="text-stone-700 dark:text-stone-300">
-              {settings.outingTimes.length} saídas: {sortOutings(settings.outingTimes).map((o) => o.time).join(', ')}
+              {schedule.outingTimes.length} saídas: {sortOutings(schedule.outingTimes).map((o) => o.time).join(', ')}
             </p>
             <Button tone="neutral" icon={<CalendarClock aria-hidden size={20} />} onClick={() => setEditSchedule(true)}>
               Editar
             </Button>
           </div>
           <label className="mt-4 flex min-h-12 items-center justify-between gap-3">
-            <span className="font-semibold">Lembretes de saída</span>
+            <span className="font-semibold">Lembretes de saída neste celular</span>
             <input
               type="checkbox"
-              checked={settings.remindersEnabled}
-              onChange={(e) => void updateSettings({ remindersEnabled: e.target.checked })}
+              checked={schedule.remindersEnabled}
+              onChange={(e) => schedule.update({ remindersEnabled: e.target.checked })}
               className="!min-h-0 size-7 accent-brand-700"
             />
           </label>

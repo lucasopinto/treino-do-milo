@@ -13,6 +13,7 @@ import { showSystemNotification } from '../../lib/notify'
 import { readLocalJson, writeLocalJson } from '../../lib/storage'
 import { feedbackOk } from '../../lib/feedback'
 import { isPushOn } from '../../sync/push'
+import { useOutingSchedule } from '../../sync/schedule'
 
 const CHECK_MS = 15_000
 const SNOOZE_MS = 10 * 60_000
@@ -34,6 +35,7 @@ function markFired(key: string) {
  */
 export function ReminderWatcher() {
   const settings = useSettings()
+  const schedule = useOutingSchedule()
   const toast = useToast()
   const { trainer } = useTrainer()
   const [active, setActive] = useState<OutingOccurrence | null>(null)
@@ -41,7 +43,7 @@ export function ReminderWatcher() {
   const snoozeUntil = useRef<{ at: number; occ: OutingOccurrence } | null>(null)
 
   useEffect(() => {
-    if (!settings.remindersEnabled) return
+    if (!schedule.remindersEnabled) return
     function fire(occ: OutingOccurrence) {
       setActive(occ)
       playCue('lembrete')
@@ -60,7 +62,7 @@ export function ReminderWatcher() {
         return
       }
       const fired = firedSet()
-      for (const occ of dueOutings(settings.outingTimes, lastCheck.current, now)) {
+      for (const occ of dueOutings(schedule.outingTimes, lastCheck.current, now)) {
         const key = `${dayKey(occ.at)}:${occ.outing.id}`
         if (fired.has(key)) continue
         markFired(key)
@@ -80,7 +82,7 @@ export function ReminderWatcher() {
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', check)
     }
-  }, [settings.outingTimes, settings.remindersEnabled, settings.dogName])
+  }, [schedule.outingTimes, schedule.remindersEnabled, settings.dogName])
 
   if (!active) return null
 

@@ -135,7 +135,8 @@ def test_tick_avisa_todos_os_celulares_uma_vez(client, db, push_on):
     save_settings(client, lucas["token"])
 
     out = run_tick(db, at(6, 46).astimezone(UTC))
-    assert (out.reminders, out.sent) == (1, 2)
+    # Sem agenda própria, os dois celulares usam a agenda da casa: um aviso para cada um.
+    assert (out.reminders, out.sent) == (2, 2)
     assert {e for e, _ in push_on["sent"]} == {"https://push.example/lucas", "https://push.example/pai"}
     assert push_on["sent"][0][1]["title"] == "Hora de levar o Milo lá fora"
 
@@ -199,7 +200,7 @@ def test_inscricao_muda_de_dono(client, db, push_on):
 
 def test_marcas_antigas_sao_limpas(client, db, push_on):
     lucas = create_household(client)
-    db.add(SentReminder(household_id=lucas["householdId"], day="2020-01-01", outing_id="o1", sent_at=1))
+    db.add(SentReminder(device_id=lucas["deviceId"], day="2020-01-01", outing_id="o1", sent_at=1))
     db.commit()
     run_tick(db, datetime.now(UTC) - timedelta(seconds=1))
     db.expire_all()
@@ -246,3 +247,65 @@ def test_servidor_reiniciado_nao_repete_aviso(client, db, push_on):
     assert run_tick(db, at(6, 46).astimezone(UTC)).reminders == 1
     cache.reset()  # como se o processo tivesse reiniciado
     assert run_tick(db, at(6, 47).astimezone(UTC)).reminders == 0
+
+
+# ---------- agenda própria de cada aparelho (ex.: Lucas no Brasil, pai em Portugal) ----------
+
+LISBOA = ZoneInfo("Europe/Lisbon")
+
+
+def set_schedule(client, token, outings, tz, enabled=True):
+    return client.put(
+        "/devices/me/schedule",
+        json={"outingTimes": outings, "remindersEnabled": enabled, "timezone": tz},
+        headers=auth(token),
+    )
+
+
+def test_cada_celular_avisa_na_sua_agenda_e_no_seu_fuso(client, db, push_on):
+    lucas, pai = household_pair(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    subscribe(client, pai["token"], "https://push.example/pai")
+    save_settings(client, lucas["token"])
+    assert set_schedule(client, lucas["token"], [{"id": "l1", "time": "07:00", "label": "Manhã"}], "America/Sao_Paulo").status_code == 204
+    assert set_schedule(client, pai["token"], [{"id": "p1", "time": "07:00", "label": "Manhã"}], "Europe/Lisbon").status_code == 204
+
+    # 07:00 em Lisboa (03:00 ou 04:00 em São Paulo): só o pai é avisado.
+    out = run_tick(db, datetime(2026, 11, 10, 7, 1, tzinfo=LISBOA).astimezone(UTC))
+    assert (out.reminders, out.sent) == (1, 1)
+    assert push_on["sent"][-1][0] == "https://push.example/pai"
+
+    # 07:00 em São Paulo: só o Lucas.
+    out = run_tick(db, at(7, 1).astimezone(UTC))
+    assert (out.reminders, out.sent) == (1, 1)
+    assert push_on["sent"][-1][0] == "https://push.example/lucas"
+
+    # A agenda antiga da casa (06:45) não vale mais para quem tem agenda própria.
+    assert run_tick(db, at(6, 46, day=11).astimezone(UTC)).reminders == 0
+
+
+def test_agenda_propria_pode_desligar_os_lembretes(client, db, push_on):
+    lucas = create_household(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    save_settings(client, lucas["token"])
+    set_schedule(client, lucas["token"], [{"id": "o1", "time": "06:45", "label": "Ao acordar"}], "America/Sao_Paulo", enabled=False)
+    assert run_tick(db, at(6, 46).astimezone(UTC)).reminders == 0
+
+
+def test_mudar_a_agenda_do_celular_vale_no_proximo_tick(client, db, push_on):
+    lucas = create_household(client)
+    subscribe(client, lucas["token"], "https://push.example/lucas")
+    save_settings(client, lucas["token"])
+    run_tick(db, at(7, 0).astimezone(UTC))
+    set_schedule(client, lucas["token"], [{"id": "n1", "time": "07:30", "label": "Nova"}], "America/Sao_Paulo")
+    out = run_tick(db, at(7, 30).astimezone(UTC))
+    assert out.reminders == 1 and push_on["sent"][-1][1]["body"].startswith("Nova (07:30)")
+    # O nome do cachorro continua vindo das configurações da casa.
+    assert push_on["sent"][-1][1]["title"] == "Hora de levar o Milo lá fora"
+
+
+def test_agenda_com_fuso_ou_horario_invalido_e_recusada(client):
+    lucas = create_household(client)
+    assert set_schedule(client, lucas["token"], [], "Marte/Olimpo").status_code == 422
+    assert set_schedule(client, lucas["token"], [{"id": "x", "time": "25:00", "label": "?"}], "Europe/Lisbon").status_code == 422
+    assert client.put("/devices/me/schedule", json={"outingTimes": [], "timezone": "Europe/Lisbon"}).status_code == 401

@@ -1,6 +1,8 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -52,6 +54,29 @@ class HouseholdOut(Schema):
 
 class RenameDevice(Schema):
     name: str = Field(min_length=1, max_length=60)
+
+
+class OutingIn(Schema):
+    id: str = Field(min_length=1, max_length=64)
+    time: str = Field(pattern=r"^([01]?\d|2[0-3]):[0-5]\d$", examples=["07:00"])
+    label: str = Field(default="Saída", max_length=60)
+
+
+class DeviceScheduleIn(Schema):
+    """Agenda de saídas deste aparelho, no fuso dele."""
+
+    outing_times: list[OutingIn] = Field(max_length=24)
+    reminders_enabled: bool = True
+    timezone: str = Field(min_length=1, max_length=64, examples=["Europe/Lisbon"])
+
+    @field_validator("timezone")
+    @classmethod
+    def _valid_tz(cls, v: str) -> str:
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError("Fuso horário desconhecido.") from e
+        return v
 
 
 # ---------- Sincronização ----------

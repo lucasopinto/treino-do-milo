@@ -41,6 +41,11 @@ class Device(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[int] = mapped_column(BigInteger)
     last_seen_at: Mapped[int] = mapped_column(BigInteger)
+    # Agenda de saídas própria deste aparelho ({"outingTimes": [...], "remindersEnabled": bool}).
+    # Cada pessoa pode morar num lugar (ex.: Brasil e Portugal). Vazio = usa a agenda da casa.
+    schedule: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Fuso do aparelho (ex.: "Europe/Lisbon"). Vazio = fuso padrão do servidor.
+    timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     household: Mapped[Household] = relationship(back_populates="devices")
 
@@ -83,11 +88,11 @@ class PushSubscription(Base):
 
 
 class SentReminder(Base):
-    """Marca cada lembrete enviado, para nunca mandar o mesmo duas vezes."""
+    """Marca cada lembrete enviado a cada aparelho, para nunca mandar o mesmo duas vezes."""
 
-    __tablename__ = "sent_reminders"
+    __tablename__ = "sent_device_reminders"
 
-    household_id: Mapped[str] = mapped_column(ForeignKey("households.id", ondelete="CASCADE"), primary_key=True)
-    day: Mapped[str] = mapped_column(String(10), primary_key=True)  # AAAA-MM-DD no fuso da casa
+    device_id: Mapped[str] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), primary_key=True)
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)  # AAAA-MM-DD no fuso do aparelho
     outing_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     sent_at: Mapped[int] = mapped_column(BigInteger)
