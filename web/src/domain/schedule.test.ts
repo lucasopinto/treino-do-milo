@@ -59,3 +59,38 @@ describe('outingsFromMeals', () => {
     expect(outingsFromMeals(['07:30', '18:50', 'x'])).toEqual(['07:50', '19:10'])
   })
 })
+
+describe('agenda noutro fuso (pai em Portugal, celular no Brasil)', () => {
+  const LISBOA = 'Europe/Lisbon'
+  const SP = 'America/Sao_Paulo'
+  const noite = [{ id: 'd', time: '22:30', label: 'Antes de dormir' }]
+
+  it('em Lisboa já passa das 22h: a saída das 22:30 de lá é daqui a poucos minutos', () => {
+    // 22:10 em Lisboa = 19:10 em São Paulo (novembro: Lisboa UTC+0, São Paulo UTC−3).
+    const now = new Date(Date.UTC(2026, 10, 9, 22, 10))
+    const r = nextOuting(noite, now, LISBOA)!
+    expect(r.at.getTime() - now.getTime()).toBe(20 * 60_000)
+    expect(r.tomorrow).toBe(false)
+    // No fuso do Brasil, a mesma agenda ainda está a 3h20.
+    expect(nextOuting(noite, now, SP)!.at.getTime() - now.getTime()).toBe(200 * 60_000)
+  })
+
+  it('lembrete dispara às 22:30 de Lisboa, não às 22:30 do Brasil', () => {
+    const lisboa2231 = new Date(Date.UTC(2026, 10, 9, 22, 31))
+    expect(dueOutings(noite, new Date(lisboa2231.getTime() - 120_000), lisboa2231, undefined, LISBOA)).toHaveLength(1)
+    expect(dueOutings(noite, new Date(lisboa2231.getTime() - 120_000), lisboa2231, undefined, SP)).toHaveLength(0)
+  })
+
+  it('depois da última saída de Lisboa, a próxima é amanhã cedo no horário de lá', () => {
+    const now = new Date(Date.UTC(2026, 10, 9, 23, 0)) // 23:00 em Lisboa
+    const r = nextOuting([{ id: 'a', time: '07:00', label: 'Manhã' }], now, LISBOA)!
+    expect(r.tomorrow).toBe(true)
+    expect(r.at.toISOString()).toBe('2026-11-10T07:00:00.000Z')
+  })
+
+  it('respeita o horário de verão de Portugal', () => {
+    const now = new Date(Date.UTC(2026, 6, 1, 12, 0)) // julho: Lisboa UTC+1
+    const r = nextOuting([{ id: 'a', time: '22:30', label: '' }], now, LISBOA)!
+    expect(r.at.toISOString()).toBe('2026-07-01T21:30:00.000Z')
+  })
+})

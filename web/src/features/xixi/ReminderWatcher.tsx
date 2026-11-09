@@ -5,7 +5,7 @@ import { useToast } from '../../components/Toast'
 import { useSettings } from '../../hooks/useData'
 import { useTrainer } from '../../hooks/useTrainer'
 import { addElimination } from '../../db/repo'
-import { dayKey, formatHM } from '../../domain/dates'
+import { dayKey } from '../../domain/dates'
 import { dueOutings, type OutingOccurrence } from '../../domain/schedule'
 import { playCue } from '../../lib/audio'
 import { vibrate } from '../../lib/haptics'
@@ -13,7 +13,7 @@ import { showSystemNotification } from '../../lib/notify'
 import { readLocalJson, writeLocalJson } from '../../lib/storage'
 import { feedbackOk } from '../../lib/feedback'
 import { isPushOn } from '../../sync/push'
-import { useOutingSchedule } from '../../sync/schedule'
+import { profileSchedule, useDeviceOwner } from '../../sync/schedule'
 
 const CHECK_MS = 15_000
 const SNOOZE_MS = 10 * 60_000
@@ -35,9 +35,11 @@ function markFired(key: string) {
  */
 export function ReminderWatcher() {
   const settings = useSettings()
-  const schedule = useOutingSchedule()
   const toast = useToast()
   const { trainer } = useTrainer()
+  // Os lembretes deste celular seguem a agenda do dono dele (no fuso do dono).
+  const owner = useDeviceOwner()
+  const schedule = profileSchedule(settings, owner ?? trainer.id)
   const [active, setActive] = useState<OutingOccurrence | null>(null)
   const lastCheck = useRef(new Date(Date.now() - 10 * 60_000))
   const snoozeUntil = useRef<{ at: number; occ: OutingOccurrence } | null>(null)
@@ -62,7 +64,7 @@ export function ReminderWatcher() {
         return
       }
       const fired = firedSet()
-      for (const occ of dueOutings(schedule.outingTimes, lastCheck.current, now)) {
+      for (const occ of dueOutings(schedule.outingTimes, lastCheck.current, now, undefined, schedule.timezone)) {
         const key = `${dayKey(occ.at)}:${occ.outing.id}`
         if (fired.has(key)) continue
         markFired(key)
@@ -82,7 +84,8 @@ export function ReminderWatcher() {
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', check)
     }
-  }, [schedule.outingTimes, schedule.remindersEnabled, settings.dogName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(schedule.outingTimes), schedule.remindersEnabled, schedule.timezone, settings.dogName])
 
   if (!active) return null
 
@@ -98,7 +101,7 @@ export function ReminderWatcher() {
       <div className="w-full max-w-md animate-fade-up rounded-3xl bg-white p-5 shadow-2xl dark:bg-stone-900">
         <div className="mb-3 flex items-center gap-3 text-brand-700 dark:text-brand-400">
           <BellRing aria-hidden size={32} className="animate-pulse" />
-          <span className="text-lg font-bold">{formatHM(active.at)} · {active.outing.label}</span>
+          <span className="text-lg font-bold">{active.outing.time} · {active.outing.label}</span>
         </div>
         <h2 id="lembrete-titulo" className="text-2xl font-bold">
           Hora de levar o {settings.dogName} lá fora

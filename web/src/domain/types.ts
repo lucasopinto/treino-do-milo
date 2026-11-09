@@ -80,6 +80,12 @@ export interface SkillProgress extends BaseRecord {
 export interface Trainer {
   id: string
   name: string
+  /** Fuso da pessoa, ex.: "Europe/Lisbon". Vazio = fuso do celular. */
+  timezone?: string
+  /** Agenda de saídas da pessoa, no fuso dela. Vazio = agenda antiga da casa (outingTimes). */
+  outingTimes?: OutingTime[]
+  /** Lembretes de saída ligados para a pessoa. Vazio = remindersEnabled da casa. */
+  remindersEnabled?: boolean
 }
 
 export interface OutingTime {
@@ -96,6 +102,7 @@ export interface Settings extends BaseRecord {
   dogPhoto: string | null // data URL JPEG pequena
   trainers: Trainer[]
   mealTimes: string[] // HH:MM
+  /** Agenda antiga da casa; hoje cada perfil tem a sua (Trainer.outingTimes). */
   outingTimes: OutingTime[]
   activityGoalMin: number
   soundType: SoundType

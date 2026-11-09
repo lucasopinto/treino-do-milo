@@ -5,14 +5,15 @@ import { useToast } from '../../components/Toast'
 import { useSettings } from '../../hooks/useData'
 import { outingsFromMeals, sortOutings } from '../../domain/schedule'
 import { newId } from '../../lib/ids'
-import { useOutingSchedule } from '../../sync/schedule'
-import { getSyncConfig } from '../../sync/controller'
+import { timeZoneName, timeZoneOptions, useProfileSchedule } from '../../sync/schedule'
+import { useTrainer } from '../../hooks/useTrainer'
 import { feedbackOk } from '../../lib/feedback'
 import type { OutingTime } from '../../domain/types'
 
 export function OutingScheduleEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { trainer } = useTrainer()
   return (
-    <Sheet open={open} onClose={onClose} title="Horários de saída">
+    <Sheet open={open} onClose={onClose} title={`Horários de saída · ${trainer.name}`}>
       {open && <EditorBody onClose={onClose} />}
     </Sheet>
   )
@@ -20,9 +21,11 @@ export function OutingScheduleEditor({ open, onClose }: { open: boolean; onClose
 
 function EditorBody({ onClose }: { onClose: () => void }) {
   const settings = useSettings()
-  const schedule = useOutingSchedule()
+  const { trainer } = useTrainer()
+  const schedule = useProfileSchedule(trainer.id)
   const toast = useToast()
   const [list, setList] = useState<OutingTime[]>(() => sortOutings(schedule.outingTimes))
+  const [tz, setTz] = useState(schedule.timezone)
 
   const change = (id: string, patch: Partial<OutingTime>) =>
     setList((l) => l.map((o) => (o.id === id ? { ...o, ...patch } : o)))
@@ -38,9 +41,9 @@ function EditorBody({ onClose }: { onClose: () => void }) {
     setList((l) => sortOutings([...l, ...extra]))
   }
 
-  function save() {
+  async function save() {
     const clean = list.filter((o) => o.time).map((o) => ({ ...o, label: o.label.trim() || 'Saída' }))
-    schedule.update({ outingTimes: sortOutings(clean) })
+    await schedule.update({ outingTimes: sortOutings(clean), timezone: tz })
     feedbackOk()
     toast('Agenda salva.')
     onClose()
@@ -48,11 +51,20 @@ function EditorBody({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {getSyncConfig() && (
-        <p className="rounded-xl bg-sky-50 p-3 text-sky-900 dark:bg-sky-950 dark:text-sky-100">
-          Estes horários são só deste celular, no horário daqui. Cada pessoa da casa tem a sua agenda.
-        </p>
-      )}
+      <p className="rounded-xl bg-sky-50 p-3 text-sky-900 dark:bg-sky-950 dark:text-sky-100">
+        Agenda de <strong>{trainer.name}</strong>. Cada pessoa tem a sua, no horário de onde ela mora. Para editar a de
+        outra pessoa, troque o perfil no topo da tela.
+      </p>
+      <label className="flex flex-col gap-1">
+        <span className="font-semibold">Horários no fuso de</span>
+        <select value={tz} onChange={(e) => setTz(e.target.value)} className="min-h-12">
+          {timeZoneOptions(tz).map((z) => (
+            <option key={z} value={z}>
+              {timeZoneName(z)}
+            </option>
+          ))}
+        </select>
+      </label>
       <p className="text-stone-600 dark:text-stone-400">
         Saídas fixas ajudam o {settings.dogName} a entender a rotina. Lembre também de sair depois de brincar e antes de vocês saírem de casa.
       </p>
@@ -96,7 +108,7 @@ function EditorBody({ onClose }: { onClose: () => void }) {
           Após refeições
         </Button>
       </div>
-      <Button size="lg" onClick={save}>
+      <Button size="lg" onClick={() => void save()}>
         Salvar agenda
       </Button>
     </div>

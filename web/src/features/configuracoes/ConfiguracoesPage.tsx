@@ -17,7 +17,8 @@ import { SoundSettings } from '../clicker/SoundSettings'
 import { BackupSection } from './BackupSection'
 import { sortOutings } from '../../domain/schedule'
 import { getSyncConfig, markFullResync } from '../../sync/controller'
-import { useOutingSchedule } from '../../sync/schedule'
+import { setDeviceOwner, useDeviceOwner, useProfileSchedule } from '../../sync/schedule'
+import { useTrainer } from '../../hooks/useTrainer'
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -48,7 +49,9 @@ function TextSetting({ label, value, onSave }: { label: string; value: string; o
 
 export function ConfiguracoesPage() {
   const settings = useSettings()
-  const schedule = useOutingSchedule()
+  const { trainer } = useTrainer()
+  const schedule = useProfileSchedule(trainer.id)
+  const owner = useDeviceOwner()
   const toast = useToast()
   const photoInput = useRef<HTMLInputElement>(null)
   const [theme, setTheme] = useState<ThemePref>(getThemePref)
@@ -142,21 +145,33 @@ export function ConfiguracoesPage() {
           <MealTimes />
           <div className="mt-4 flex items-center justify-between gap-2">
             <p className="text-stone-700 dark:text-stone-300">
-              {schedule.outingTimes.length} saídas: {sortOutings(schedule.outingTimes).map((o) => o.time).join(', ')}
+              {trainer.name}: {schedule.outingTimes.length} saídas: {sortOutings(schedule.outingTimes).map((o) => o.time).join(', ')}
             </p>
             <Button tone="neutral" icon={<CalendarClock aria-hidden size={20} />} onClick={() => setEditSchedule(true)}>
               Editar
             </Button>
           </div>
           <label className="mt-4 flex min-h-12 items-center justify-between gap-3">
-            <span className="font-semibold">Lembretes de saída neste celular</span>
+            <span className="font-semibold">Lembretes de saída de {trainer.name}</span>
             <input
               type="checkbox"
               checked={schedule.remindersEnabled}
-              onChange={(e) => schedule.update({ remindersEnabled: e.target.checked })}
+              onChange={(e) => void schedule.update({ remindersEnabled: e.target.checked })}
               className="!min-h-0 size-7 accent-brand-700"
             />
           </label>
+          {settings.trainers.length > 1 && (
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="font-semibold">Este celular é de</span>
+              <Segmented
+                label="Este celular é de"
+                value={owner ?? ''}
+                options={settings.trainers.map((t) => ({ value: t.id, label: t.name }))}
+                onChange={(id) => void setDeviceOwner(id)}
+              />
+              <p className="text-sm text-stone-600 dark:text-stone-400">Os lembretes deste celular seguem a agenda dessa pessoa, no horário dela.</p>
+            </div>
+          )}
           <div className="mt-3">
             <NotificationBanner />
           </div>

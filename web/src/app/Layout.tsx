@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, ScrollRestoration } from 'react-router'
 import { BottomNav } from './BottomNav'
 import { ReminderWatcher } from '../features/xixi/ReminderWatcher'
+import { DeviceOwnerPrompt } from '../features/xixi/DeviceOwnerPrompt'
 import { ActiveSessionPill } from '../features/sessao/ActiveSessionPill'
 import { useSettings } from '../hooks/useData'
 import { configureAudio, ensureAudio } from '../lib/audio'
@@ -45,6 +46,7 @@ export function Layout() {
       <BottomNav />
       <ActiveSessionPill />
       <ReminderWatcher />
+      <DeviceOwnerPrompt />
       <ScrollRestoration />
     </>
   )

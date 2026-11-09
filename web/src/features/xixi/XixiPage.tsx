@@ -12,12 +12,15 @@ import { EliminationQuickGrid } from './EliminationSheet'
 import { EliminationList } from './EliminationList'
 import { NextOutingCard } from './NextOutingCard'
 import { OutingScheduleEditor } from './OutingScheduleEditor'
-import { useOutingSchedule } from '../../sync/schedule'
+import { timeZoneName, useProfileSchedule } from '../../sync/schedule'
+import { useTrainer } from '../../hooks/useTrainer'
+import { localTimeZone } from '../../domain/schedule'
 
 const XixiCharts = lazy(() => import('./XixiCharts'))
 
 export function XixiPage() {
-  const schedule = useOutingSchedule()
+  const { trainer } = useTrainer()
+  const schedule = useProfileSchedule(trainer.id)
   const now = useNow(1000)
   const since = addDays(startOfDay(now), -35).getTime()
   const elims = useEliminations(since) ?? []
@@ -43,7 +46,12 @@ export function XixiPage() {
 
         <Card>
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-lg font-bold">Agenda de saídas</h2>
+            <h2 className="text-lg font-bold">
+              Agenda de saídas · {trainer.name}
+              {schedule.timezone !== localTimeZone() && (
+                <span className="block text-sm font-normal text-stone-600 dark:text-stone-400">Hora de {timeZoneName(schedule.timezone)}</span>
+              )}
+            </h2>
             <Button tone="neutral" icon={<CalendarClock aria-hidden size={20} />} onClick={() => setEditSchedule(true)}>
               Editar
             </Button>

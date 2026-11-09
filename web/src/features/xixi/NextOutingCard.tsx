@@ -1,12 +1,16 @@
 import { Link } from 'react-router'
 import { DoorOpen } from 'lucide-react'
-import { useOutingSchedule } from '../../sync/schedule'
-import { formatClock, formatDurationText, formatHM, daysBetween } from '../../domain/dates'
-import { nextOuting } from '../../domain/schedule'
+import { timeZoneName, useProfileSchedule } from '../../sync/schedule'
+import { useTrainer } from '../../hooks/useTrainer'
+import { formatClock, formatDurationText } from '../../domain/dates'
+import { localTimeZone, nextOuting } from '../../domain/schedule'
 
 export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boolean }) {
-  const { outingTimes } = useOutingSchedule()
-  const next = nextOuting(outingTimes, now)
+  const { trainer } = useTrainer()
+  const { outingTimes, timezone } = useProfileSchedule(trainer.id)
+  const next = nextOuting(outingTimes, now, timezone)
+  // Agenda noutro fuso (ex.: perfil do pai, em Portugal, visto do Brasil): mostra o horário de lá.
+  const elsewhere = timezone !== localTimeZone()
   const content = !next ? (
     <span className="text-lg">Nenhum horário de saída configurado.</span>
   ) : (
@@ -14,10 +18,15 @@ export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boo
       <span className="block text-sm font-semibold uppercase tracking-wide opacity-90">Próxima saída de xixi</span>
       <span className="mt-1 flex items-baseline justify-between gap-2">
         <span className="text-xl font-bold">
-          {next.outing.label} · {formatHM(next.at)}
-          {daysBetween(now, next.at) === 1 && <span className="font-normal"> (amanhã)</span>}
+          {next.outing.label} · {next.outing.time}
+          {next.tomorrow && <span className="font-normal"> (amanhã)</span>}
         </span>
       </span>
+      {elsewhere && (
+        <span className="block text-sm opacity-90">
+          Agenda de {trainer.name} · hora de {timeZoneName(timezone)}
+        </span>
+      )}
       <span className="mt-1 block text-4xl font-bold tabular" aria-live="off">
         {next.at.getTime() - now.getTime() < 3_600_000
           ? formatClock(next.at.getTime() - now.getTime())
@@ -33,7 +42,7 @@ export function NextOutingCard({ now, linked = true }: { now: Date; linked?: boo
     </>
   )
   return linked ? (
-    <Link to="/xixi" className={`${cls} active:bg-sky-900`} aria-label={next ? `Próxima saída: ${next.outing.label} às ${formatHM(next.at)}. Abrir xixi e cocô.` : 'Abrir xixi e cocô'}>
+    <Link to="/xixi" className={`${cls} active:bg-sky-900`} aria-label={next ? `Próxima saída: ${next.outing.label} às ${next.outing.time}. Abrir xixi e cocô.` : 'Abrir xixi e cocô'}>
       {inner}
     </Link>
   ) : (
