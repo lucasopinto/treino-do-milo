@@ -10,8 +10,19 @@ let volume = 0.9
 let clickType: SoundType = 'clique'
 
 let createdAt = 0
-/** O iOS derrubou o áudio (tela bloqueada, app no fundo): recriar no próximo toque. */
+/** Hora (relógio de parede) em que o áudio atual foi criado, para o diagnóstico. */
+let createdAtWall = 0
+/**
+ * O áudio atual não serve mais e deve ser recriado no próximo toque: tela bloqueada, app no fundo,
+ * interrupção do iOS (ligação, Siri, alarme) ou troca do tipo de sessão de áudio.
+ */
 let stale = false
+/** Último erro de áudio capturado (para o diagnóstico escondido nas Configurações). */
+let lastError: { at: number; where: string; message: string } | null = null
+
+function noteError(where: string, e: unknown): void {
+  lastError = { at: Date.now(), where, message: e instanceof Error ? `${e.name}: ${e.message}` : String(e) }
+}
 /** Última leitura do relógio do áudio, para notar quando ele para de andar. */
 let snap: { wall: number; audio: number } | null = null
 
@@ -21,16 +32,23 @@ function getCtx(): AudioContext | null {
     const Ctor: AC | undefined = window.AudioContext ?? (window as unknown as { webkitAudioContext?: AC }).webkitAudioContext
     if (!Ctor) return null
     try {
-      ctx = new Ctor({ latencyHint: 'interactive' })
+      const created = new Ctor({ latencyHint: 'interactive' })
+      ctx = created
       createdAt = performance.now()
+      createdAtWall = Date.now()
       stale = false
       snap = null
-    } catch {
+      // iOS: ligação, Siri ou alarme deixam o áudio 'interrupted'. Recria no próximo toque.
+      created.addEventListener?.('statechange', () => {
+        if (created === ctx && (created.state as string) === 'interrupted') stale = true
+      })
+    } catch (e) {
+      noteError('criar AudioContext', e)
       return null
     }
   }
   // 'suspended' antes do primeiro toque; 'interrupted' no iOS depois de ir para o fundo ou de uma ligação.
-  if (ctx.state !== 'running') ctx.resume().catch(() => {})
+  if (ctx.state !== 'running') ctx.resume().catch((e) => noteError('resume', e))
   return ctx
 }
 
@@ -39,6 +57,7 @@ function getCtx(): AudioContext | null {
  * parado, o áudio às vezes diz que está 'running' mas fica mudo, com o relógio parado.
  */
 export function audioHealthy(): boolean {
+  if (ctx && (ctx.state as string) === 'interrupted') stale = true
   if (!ctx || stale || ctx.state !== 'running') return false
   const wall = performance.now()
   const audio = ctx.currentTime
@@ -62,11 +81,11 @@ export function ensureAudio(): void {
   if (audioHealthy()) return
   // Recém-criado: ainda pode estar terminando de ligar; só pede para continuar.
   if (ctx && !stale && performance.now() - createdAt < 1000) {
-    ctx.resume().catch(() => {})
+    ctx.resume().catch((e) => noteError('resume', e))
     return
   }
   if (ctx) {
-    ctx.close().catch(() => {})
+    ctx.close().catch((e) => noteError('close', e))
     ctx = null
     noise = null
   }
@@ -126,24 +145,33 @@ function playSilentMediaElement(): void {
     silentEl.setAttribute('playsinline', '')
     silentEl.preload = 'auto'
   }
-  silentEl.play().catch(() => {})
+  silentEl.play().catch((e) => noteError('audio silencioso', e))
 }
 
-// ---------- Música de outros apps × modo silencioso (iPhone) ----------
+// ---------- Modo silencioso do iPhone × música de outros apps ----------
 //
-// "ambient" (padrão): os sons do app se misturam com a música que estiver tocando e respeitam a
-// chave de silêncio do iPhone. "playback": tocam mesmo no silencioso, mas o iOS PAUSA a música
-// de outros apps. Por isso o modo silencioso é uma opção, desligada de início.
+// "playback" (padrão): o clicker toca mesmo com o iPhone no silencioso, mas o iOS pausa a música
+// de outros apps enquanto o app toca som. "ambient": mistura com a música, mas fica MUDO no
+// silencioso. A prioridade é o clicker ser ouvido, então a opção começa ligada; quem prefere ouvir
+// música junto desliga. Valor salvo: '1' ligado, '0' desligado, nada = ligado (padrão).
 
 const SILENT_KEY = 'milo.playInSilentMode'
+const silentListeners = new Set<() => void>()
 
 export function getPlayInSilentMode(): boolean {
-  return readLocal(SILENT_KEY) === '1'
+  return readLocal(SILENT_KEY) !== '0'
 }
 
 export function setPlayInSilentMode(on: boolean): void {
-  writeLocal(SILENT_KEY, on ? '1' : null)
+  writeLocal(SILENT_KEY, on ? '1' : '0')
   applyAudioSession()
+  for (const l of silentListeners) l()
+}
+
+/** Avisa quando a opção "tocar no silencioso" muda (para as telas se atualizarem). */
+export function onPlayInSilentModeChange(fn: () => void): () => void {
+  silentListeners.add(fn)
+  return () => silentListeners.delete(fn)
 }
 
 function applyAudioSession(): void {
@@ -153,13 +181,41 @@ function applyAudioSession(): void {
   if (nav.audioSession.type === want) return
   try {
     nav.audioSession.type = want
-  } catch {
-    /* navegador sem suporte */
+    // No WebKit, a troca pode não valer para um áudio já criado: recria no próximo toque.
+    if (ctx) stale = true
+  } catch (e) {
+    noteError('audioSession', e)
   }
 }
 
-// Já ao abrir o app: não deixa o iOS pausar a música de quem está ouvindo.
+// Já ao abrir o app, antes de criar o áudio, deixa a sessão do tipo certo.
 applyAudioSession()
+
+// ---------- Diagnóstico (escondido nas Configurações) ----------
+
+export interface AudioDiagnostics {
+  audioSession: string | null
+  playInSilentMode: boolean
+  contextState: string | null
+  healthy: boolean
+  stale: boolean
+  createdAt: number | null
+  lastError: { at: number; where: string; message: string } | null
+}
+
+export function audioDiagnostics(): AudioDiagnostics {
+  const nav = typeof navigator === 'undefined' ? null : (navigator as Navigator & { audioSession?: { type: string } })
+  const healthy = audioHealthy()
+  return {
+    audioSession: nav?.audioSession ? nav.audioSession.type : null,
+    playInSilentMode: getPlayInSilentMode(),
+    contextState: ctx ? (ctx.state as string) : null,
+    healthy,
+    stale,
+    createdAt: ctx ? createdAtWall : null,
+    lastError,
+  }
+}
 
 /**
  * Chamar num toque do usuário: navegadores só liberam áudio depois de uma interação.

@@ -6,6 +6,7 @@ import { useToast } from '../../components/Toast'
 import { TrainerSelector } from '../../components/TrainerSelector'
 import { useActiveSession } from './SessionContext'
 import { ClickerButton } from '../clicker/ClickerButton'
+import { SilentModeHint } from '../clicker/SilentModeHint'
 import { useSkillsOverview } from '../../hooks/useSkills'
 import { useTrainer } from '../../hooks/useTrainer'
 import { useNow } from '../../hooks/useNow'
@@ -241,6 +242,7 @@ function SessionRunning() {
       </div>
 
       <ClickerButton size="compact" label="Clicker" hint="cada clique conta como acerto" onClick={() => dispatch({ type: 'click' })} />
+      <SilentModeHint />
 
       <div className="grid grid-cols-3 gap-2">
         <Button

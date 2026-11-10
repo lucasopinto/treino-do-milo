@@ -3,7 +3,8 @@ import { Volume1, Volume2 } from 'lucide-react'
 import { Button, Segmented } from '../../components/ui'
 import { updateSettings } from '../../db/repo'
 import { useSettings } from '../../hooks/useData'
-import { configureAudio, getPlayInSilentMode, playClick, setPlayInSilentMode } from '../../lib/audio'
+import { configureAudio, playClick, setPlayInSilentMode } from '../../lib/audio'
+import { usePlayInSilentMode } from './usePlayInSilentMode'
 import { isIOS } from '../../lib/pwa'
 import type { SoundType } from '../../domain/types'
 
@@ -16,7 +17,7 @@ const SOUND_OPTIONS: { value: SoundType; label: string }[] = [
 export function SoundSettings() {
   const settings = useSettings()
   const [volume, setVolume] = useState(settings.volume)
-  const [silentMode, setSilentMode] = useState(getPlayInSilentMode)
+  const silentMode = usePlayInSilentMode()
 
   useEffect(() => setVolume(settings.volume), [settings.volume])
 
@@ -66,18 +67,18 @@ export function SoundSettings() {
         Testar som
       </Button>
       {isIOS() && (
-        <label className="flex min-h-12 items-start justify-between gap-3">
+        <label id="tocar-no-silencioso" className="flex min-h-12 items-start justify-between gap-3">
           <span>
-            <span className="block font-semibold">Tocar com o iPhone no silencioso</span>
+            <span className="block font-semibold">Tocar no silencioso</span>
             <span className="block text-sm text-stone-600 dark:text-stone-400">
-              Ligado, o clique toca mesmo no silencioso, mas o iPhone pausa a música de outros apps. Desligado, o som se mistura com a música.
+              Ligado (padrão), o clique toca mesmo com o iPhone no silencioso, mas o iPhone pausa a música de outros apps. Desligado, o som
+              se mistura com a música, mas fica mudo no silencioso.
             </span>
           </span>
           <input
             type="checkbox"
             checked={silentMode}
             onChange={(e) => {
-              setSilentMode(e.target.checked)
               setPlayInSilentMode(e.target.checked)
             }}
             className="!min-h-0 mt-1 size-7 shrink-0 accent-brand-700"

@@ -14,16 +14,19 @@ import { newId } from '../../lib/ids'
 import { OutingScheduleEditor } from '../xixi/OutingScheduleEditor'
 import { NotificationBanner } from '../xixi/XixiPage'
 import { SoundSettings } from '../clicker/SoundSettings'
+import { AudioDiagnostics } from './AudioDiagnostics'
 import { BackupSection } from './BackupSection'
 import { sortOutings } from '../../domain/schedule'
 import { getSyncConfig, markFullResync } from '../../sync/controller'
 import { setDeviceOwner, useDeviceOwner, useProfileSchedule } from '../../sync/schedule'
 import { useTrainer } from '../../hooks/useTrainer'
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, children, onTitleTap }: { title: string; children: ReactNode; onTitleTap?: () => void }) {
   return (
     <Card>
-      <h2 className="mb-3 text-lg font-bold">{title}</h2>
+      <h2 className="mb-3 text-lg font-bold" onClick={onTitleTap}>
+        {title}
+      </h2>
       {children}
     </Card>
   )
@@ -48,6 +51,17 @@ function TextSetting({ label, value, onSave }: { label: string; value: string; o
 }
 
 export function ConfiguracoesPage() {
+  // Diagnóstico do som escondido: 5 toques seguidos no título "Sons do clicker".
+  const [showAudioDiag, setShowAudioDiag] = useState(false)
+  const taps = useRef<number[]>([])
+  const tapSoundTitle = () => {
+    const now = Date.now()
+    taps.current = [...taps.current.filter((t) => now - t < 3000), now]
+    if (taps.current.length >= 5) {
+      taps.current = []
+      setShowAudioDiag((v) => !v)
+    }
+  }
   const settings = useSettings()
   const { trainer } = useTrainer()
   const schedule = useProfileSchedule(trainer.id)
@@ -198,8 +212,9 @@ export function ConfiguracoesPage() {
           <p className="mt-2 text-center text-sm text-stone-600 dark:text-stone-400">por dia</p>
         </Section>
 
-        <Section title="Sons do clicker">
+        <Section title="Sons do clicker" onTitleTap={tapSoundTitle}>
           <SoundSettings />
+          {showAudioDiag && <AudioDiagnostics />}
         </Section>
 
         <Section title="Aparência">

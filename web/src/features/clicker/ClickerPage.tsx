@@ -3,6 +3,7 @@ import { RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { Button, PageHeader, Sheet } from '../../components/ui'
 import { ClickerButton } from './ClickerButton'
 import { SoundSettings } from './SoundSettings'
+import { SilentModeHint } from './SilentModeHint'
 import { useWakeLock } from '../../hooks/useWakeLock'
 
 export function ClickerPage() {
@@ -23,6 +24,7 @@ export function ClickerPage() {
       />
       <div className="flex flex-col items-center gap-6 pt-4">
         <ClickerButton onClick={() => setCount((c) => c + 1)} label="Clique" />
+        <SilentModeHint />
         <div className="flex items-center gap-4">
           <p className="text-xl">
             Cliques: <strong className="tabular">{count}</strong>
